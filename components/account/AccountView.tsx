@@ -85,7 +85,6 @@ export function AccountView({ ctx }: AccountViewProps) {
               </div>
               <AccountPanel
                 username={ctx.username}
-                githubUrl={ctx.githubUrl}
                 apiKey={ctx.apiKey}
                 agents={ctx.agents}
               />

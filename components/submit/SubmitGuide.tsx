@@ -234,7 +234,6 @@ function AuthAndKey({ ctx, showKeyHeading }: { ctx: AccountContext; showKeyHeadi
         {ctx.kind === "ready" ? (
           <AccountPanel
             username={ctx.username}
-            githubUrl={ctx.githubUrl}
             apiKey={ctx.apiKey}
             agents={ctx.agents}
             embedded

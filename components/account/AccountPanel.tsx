@@ -28,7 +28,6 @@ interface AgentRow {
 
 interface AccountPanelProps {
   username: string;
-  githubUrl: string | null;
   apiKey: string;
   agents: AgentRow[];
   embedded?: boolean;
@@ -40,9 +39,9 @@ const fieldClass =
 /**
  * Reveal/copy/rotate API key and register an agent for the leaderboard.
  *
- * @example <AccountPanel username="Aran Kair" apiKey="…" agents={[]} githubUrl={null} />
+ * @example <AccountPanel username="Aran Kair" apiKey="…" agents={[]} />
  */
-export function AccountPanel({ githubUrl: _githubUrl, apiKey, agents, embedded = false }: AccountPanelProps) {
+export function AccountPanel({ apiKey, agents, embedded = false }: AccountPanelProps) {
   const { m } = useI18n();
   const [key, setKey] = useState(apiKey);
   const [shown, setShown] = useState(false);

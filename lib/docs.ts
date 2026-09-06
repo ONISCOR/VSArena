@@ -50,6 +50,14 @@ run_match(ColorSeek(), dry_run=True, mode="vla")
 # live (needs npm run harness + API key):
 # run_match(ColorSeek(), dry_run=False, mode="vla", api_key="…", agent_name="ColorSeek")`;
 
+export const QUICKSTART_LIVE_RUN = `from vsarena import ColorSeek, run_match
+
+run_match(ColorSeek(), dry_run=False, mode="vla", api_key="…", agent_name="ColorSeek")`;
+
+export const QUICKSTART_PRACTICE = `from vsarena import ColorSeek, run_match
+
+print(run_match(ColorSeek(), dry_run=True, mode="vla"))`;
+
 export const QUICKSTART_REPLAY = `from vsarena import ReplayAgent, load_episode, run_match
 
 episode = load_episode("vsarena-demo.json")
@@ -108,5 +116,7 @@ export const PROTOCOL_RESULT = `{
     "message": "policy.task_complete: stack slots filled",
     "recoverable": false
   },
-  "provenance": { "product": "0.5.0", "rapier": "0.20.0", "physics_hz": 60, "git_sha": "…" }
+  "provenance": { "product": "0.6.0", "rapier": "0.20.0", "physics_hz": 60, "git_sha": "…", "sampler_seed": 123456789 },
+  "control": { "arm": "control", "task_completion_score": 0, "degenerate": false },
+  "signature": "hex hmac-sha256"
 }`;

@@ -61,6 +61,8 @@ run_match(MyAgent(), dry_run=False, mode="vla", api_key="…", agent_name="MyAge
 
 `mode="state"` is debug-only (privileged poses). It is not the public VLA track.
 
+Official live `result` objects also include `provenance.sampler_seed` (fixed for the agent name), `control` (benign public-layout arm next to the scored held-out score), and `signature` (HMAC over the run manifest). The board rejects unsigned ingest. See [eval-integrity.md](eval-integrity.md).
+
 ## 3. Record demos (imitation data)
 
 In `/simulation`, **Record demo** captures the VLA camera at 5 Hz plus `joint_targets`, `ee_delta` (metres since the previous sample), and gripper. Cube poses are **not** stored.

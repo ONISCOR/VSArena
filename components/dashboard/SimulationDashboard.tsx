@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { Suspense, useCallback, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ChangelogCard } from "@/components/brand/ChangelogCard";
 import { ArenaDock } from "@/components/dashboard/ArenaDock";
 import { ArenaStatus } from "@/components/dashboard/ArenaStatus";
 import { ClipExportModal } from "@/components/dashboard/ClipExportModal";
@@ -84,27 +85,25 @@ function SimulationDashboardInner() {
           <ArenaApp />
         </div>
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col p-3 md:p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="pointer-events-auto flex flex-col gap-2">
+          <div className="flex min-h-0 flex-1 gap-3">
+            <div className="pointer-events-auto hidden min-h-0 w-[16.5rem] shrink-0 flex-col gap-2 overflow-y-auto lg:flex">
               <ArenaStatus />
               <StudioTaskSpoilers />
+              <LeftRail tab={tab} />
             </div>
-            <div className="pointer-events-auto hidden md:block">
+            <div className="pointer-events-auto flex min-h-0 min-w-0 flex-1 flex-col gap-2 lg:hidden">
+              <ArenaStatus />
+            </div>
+            <div className="hidden min-h-0 min-w-0 flex-1 lg:block" />
+            <div className="pointer-events-auto hidden min-h-0 w-[16.5rem] shrink-0 flex-col gap-2 overflow-y-auto md:flex">
               <DecisionLog />
-            </div>
-          </div>
-          <div className="relative mt-3 min-h-0 flex-1">
-            <div className="hidden max-w-[16.5rem] overflow-y-auto lg:block">
-              <div className="pointer-events-auto">
-                <LeftRail tab={tab} />
+              <ChangelogCard compact className="w-full" />
+              <div className="mt-auto self-end">
+                <LivePip label={m.studio.liveExpand} onExpand={openLive} />
               </div>
             </div>
-            {/* Bottom-right PiP: official live preview */}
-            <div className="pointer-events-none absolute bottom-0 right-0 z-20">
-              <LivePip label={m.studio.liveExpand} onExpand={openLive} />
-            </div>
           </div>
-          <div className="pointer-events-auto mt-auto pt-3">
+          <div className="pointer-events-auto mt-3 shrink-0">
             <ArenaDock tab={tab} onTab={setTab} />
           </div>
         </div>

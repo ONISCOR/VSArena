@@ -35,7 +35,15 @@ describe("replay artifact", () => {
 
     const provenance = buildProvenance({
       mode: "vla",
-      scene: { set: "public", id: "public.canonical", seed: 0, hash: "h", private_override: false },
+      samplerSeed: 7,
+      scene: {
+        set: "public",
+        id: "public.canonical",
+        seed: 0,
+        hash: "h",
+        private_override: false,
+        arm: "scored",
+      },
       counters: emptyCounters(),
       env: {},
     });

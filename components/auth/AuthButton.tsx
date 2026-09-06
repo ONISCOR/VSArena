@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/components/i18n/LocaleProvider";
+import { displayNameFromMeta, handleFromMeta } from "@/lib/auth/identity";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createBrowserSupabase } from "@/lib/supabase/browser";
 
@@ -24,12 +25,24 @@ export function AuthButton() {
     let cancelled = false;
     void supabase.auth.getUser().then(({ data }) => {
       if (cancelled) return;
-      const name = data.user?.user_metadata?.user_name ?? data.user?.email ?? null;
-      setLabel(typeof name === "string" ? name : null);
+      const user = data.user;
+      if (!user) {
+        setLabel(null);
+        return;
+      }
+      const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+      const handle = handleFromMeta(meta, user.email);
+      setLabel(displayNameFromMeta(meta, handle));
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      const name = session?.user?.user_metadata?.user_name ?? session?.user?.email ?? null;
-      setLabel(typeof name === "string" ? name : null);
+      const user = session?.user;
+      if (!user) {
+        setLabel(null);
+        return;
+      }
+      const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+      const handle = handleFromMeta(meta, user.email);
+      setLabel(displayNameFromMeta(meta, handle));
     });
     return () => {
       cancelled = true;
@@ -42,7 +55,7 @@ export function AuthButton() {
   if (label) {
     return (
       <form action="/auth/logout" method="post" className="flex items-center gap-3">
-        <Link href="/account" className="max-w-[10rem] truncate text-sm text-white hover:text-arena-cyan">
+        <Link href="/account" className="max-w-[12rem] truncate text-sm text-white hover:text-arena-cyan">
           {label}
         </Link>
         <button type="submit" className="text-sm text-arena-muted hover:text-white">

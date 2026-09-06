@@ -156,15 +156,31 @@ function parsePrivateJson(raw: string): BlockSpawn[] | null {
 
 /**
  * Official vs Studio scene. Production harness defaults to held_out.
+ * Pass `samplerSeed` (per submission) so two runs of the same agent share layouts.
+ * `arm: "control"` is always the public canonical layout (no jitter).
  *
- * @example resolveScene({ matchId: "uuid" })
+ * @example resolveScene({ matchId: "uuid", samplerSeed, arm: "scored" })
  */
 export function resolveScene(options: {
   matchId: string;
   env?: NodeJS.ProcessEnv;
+  /** When set, held-out sampling uses this instead of hashing matchId. */
+  samplerSeed?: number;
+  arm?: "scored" | "control";
 }): ResolvedScene {
   const env = options.env ?? process.env;
-  const seed = seedFromId(options.matchId);
+  if (options.arm === "control") {
+    const spawns = publicSpawns();
+    return {
+      set: "public",
+      id: "public.canonical",
+      seed: 0,
+      hash: spawnHash(spawns, "public", 0),
+      spawns,
+      private_override: false,
+    };
+  }
+  const seed = options.samplerSeed !== undefined ? options.samplerSeed >>> 0 : seedFromId(options.matchId);
   const forced = (env.VSARENA_SCENE_SET ?? "").trim();
   const privateSpawns = env.VSARENA_HELD_OUT_JSON ? parsePrivateJson(env.VSARENA_HELD_OUT_JSON) : null;
 

@@ -35,7 +35,7 @@ export const HOW_IT_WORKS = [
   {
     n: "01",
     title: "Watch",
-    body: "Open Studio v0.5.0. A 4-DOF arm, three cubes, a pad. Keyboard teleop if you want to try the task.",
+    body: "Open Studio v0.6.0. A 4-DOF arm, three cubes, a pad. Keyboard teleop if you want to try the task.",
   },
   {
     n: "02",

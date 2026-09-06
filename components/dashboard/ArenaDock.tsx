@@ -59,10 +59,10 @@ export function ArenaDock({ tab, onTab }: ArenaDockProps) {
   }
 
   return (
-    <div className="panel max-h-[42vh] space-y-3 overflow-y-auto p-3 backdrop-blur-xl md:max-h-none">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="panel space-y-2 overflow-x-auto p-2.5 backdrop-blur-xl">
+      <div className="flex flex-wrap items-center gap-1.5">
         <SimSubNav value={tab} onChange={onTab} />
-        <span className="hidden h-6 w-px bg-white/10 sm:block" />
+        <span className="hidden h-5 w-px bg-white/10 sm:block" />
         {CAMERAS.map((cam) => (
           <Button
             key={cam.id}
@@ -75,7 +75,7 @@ export function ArenaDock({ tab, onTab }: ArenaDockProps) {
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1.5">
         <Button size="sm" disabled={running} onClick={start}>
           Run Baseline-IK
         </Button>
@@ -88,7 +88,7 @@ export function ArenaDock({ tab, onTab }: ArenaDockProps) {
         <Button size="sm" variant="ghost" onClick={resetTable}>
           Reset
         </Button>
-        <span className="hidden h-6 w-px bg-white/10 md:block" />
+        <span className="hidden h-5 w-px bg-white/10 md:block" />
         <Button size="sm" variant={showGrid ? "default" : "ghost"} onClick={toggleGrid}>
           Grid
         </Button>
@@ -98,9 +98,7 @@ export function ArenaDock({ tab, onTab }: ArenaDockProps) {
         <Button size="sm" variant={showColliders ? "default" : "ghost"} onClick={toggleColliders}>
           Colliders
         </Button>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
+        <span className="hidden h-5 w-px bg-white/10 md:block" />
         <Button
           size="sm"
           variant="outline"
@@ -126,7 +124,6 @@ export function ArenaDock({ tab, onTab }: ArenaDockProps) {
         {demoRecording ? (
           <span className="font-mono text-[10px] text-arena-muted">{demoFrames} frames</span>
         ) : null}
-        <span className="hidden h-6 w-px bg-white/10 md:block" />
         <select
           className="h-8 rounded-full border border-white/15 bg-transparent px-3 text-xs text-arena-muted outline-none"
           value={clipFormat}
@@ -148,10 +145,10 @@ export function ArenaDock({ tab, onTab }: ArenaDockProps) {
             Stop clip
           </Button>
         ) : null}
+        <p className="w-full text-[10px] leading-4 text-arena-muted md:ml-auto md:w-auto">
+          Q/A yaw · W/S shoulder · E/D elbow · R/F wrist · Space grip · Esc reset · Studio ≠ public ELO
+        </p>
       </div>
-      <p className="text-[11px] leading-4 text-arena-muted">
-        Q/A yaw · W/S shoulder · E/D elbow · R/F wrist · Space grip · Esc reset · Studio ≠ public ELO
-      </p>
     </div>
   );
 }

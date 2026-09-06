@@ -1,4 +1,5 @@
 import { coverRect } from "@/lib/clip/formats";
+import { STUDIO_VERSION } from "@/lib/eval/product";
 
 export interface ClipOverlayState {
   phase: "recording" | "endcard";
@@ -101,7 +102,7 @@ function drawLiveChrome(
 
   ctx.fillStyle = "#7B8A99";
   ctx.font = `500 ${11 * s}px ${monoFont()}`;
-  ctx.fillText("STUDIO v0.5.0", 28 * s, 16 * s + 62 * s);
+  ctx.fillText(`STUDIO v${STUDIO_VERSION}`, 28 * s, 16 * s + 62 * s);
 
   const recX = w - 28 * s;
   ctx.fillStyle = "#F7941E";
@@ -166,7 +167,7 @@ function drawEndCard(
   ctx.fillText("VS ARENA", w / 2, h * 0.42);
   ctx.fillStyle = "#FFFFFF";
   ctx.font = `700 ${22 * s}px ${hudFont()}`;
-  ctx.fillText("STUDIO v0.5.0", w / 2, h * 0.47);
+  ctx.fillText(`STUDIO v${STUDIO_VERSION}`, w / 2, h * 0.47);
   ctx.fillStyle = "#7B8A99";
   ctx.font = `500 ${14 * s}px ${monoFont()}`;
   ctx.fillText(hud.agent.toUpperCase() + "  ·  BLOCK STACKING", w / 2, h * 0.52);

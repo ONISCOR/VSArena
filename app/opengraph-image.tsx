@@ -44,7 +44,7 @@ export default function OpenGraphImage() {
             Test an embodied policy on a stacking task.
           </div>
           <div style={{ marginTop: 22, color: "#8B949E", fontSize: 26, lineHeight: 1.35 }}>
-            Studio v0.5.0 is live. 1v1 Arena is not. Scores come from the harness.
+            Studio v0.6.0 is live. 1v1 Arena is not. Scores come from the harness.
           </div>
         </div>
         <div style={{ display: "flex", color: "#8B949E", fontSize: 22 }}>

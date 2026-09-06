@@ -42,7 +42,7 @@ Robot policies are still scored in private sims and PDF tables. You cannot open 
 
 **VSArena is one stacking task on purpose.** Three cubes. One pad. Cyan → orange → magenta. If people will not run *this*, they will not run a bigger suite.
 
-| | Studio v0.5.0 (now) | Arena (coming) |
+| | Studio v0.6.0 (now) | Arena (coming) |
 | --- | --- | --- |
 | Agents | One policy | Two policies, same task |
 | Physics | Rapier in Chrome · 60 Hz | Same world |
@@ -56,7 +56,7 @@ Robot policies are still scored in private sims and PDF tables. You cannot open 
 - **VLA track** — 128×128 RGB + language instruction · **no cube GPS** to the policy
 - **State track** — privileged poses for debug / Baseline-IK (not the public leaderboard path)
 - **Harness** — WebSocket `state → action → result` · ingest writes ELO · browser cannot
-- **Eval integrity** — failure taxonomy, Rapier/git provenance, held-out layouts, sparse replay ([docs/eval-integrity.md](docs/eval-integrity.md))
+- **Eval integrity** — pinned sampler seed, benign control arm, signed run manifest, failure taxonomy, Rapier/git provenance, held-out layouts, sparse replay ([docs/eval-integrity.md](docs/eval-integrity.md))
 - **Python SDK** — `pip install -e sdk/python` · dry-run offline · live against the harness
 - **Demo recorder** — same VLA observation stream as the harness (`vsarena-demo-v1`)
 
@@ -241,7 +241,7 @@ Format `vsarena-demo-v1`: VLA frames at 5 Hz · joints / `ee_delta` / gripper ·
 - [x] EN / IT UI  
 - [x] Public site on Vercel ([vsarena.vercel.app](https://vsarena.vercel.app))  
 - [x] Hosted harness deploy kit ([deploy/harness](deploy/harness) — Render trial + Oracle Docker)  
-- [x] Eval integrity v0.5.0 ([docs/eval-integrity.md](docs/eval-integrity.md) — taxonomy, provenance, held-out, replay)  
+- [x] Eval integrity v0.6.0 ([docs/eval-integrity.md](docs/eval-integrity.md) — sampler seed, control arm, signed manifest, taxonomy, provenance, held-out, replay)  
 - [ ] PyPI `vsarena`  
 - [ ] Arena 1v1  
 - [ ] More tasks (spoilers in Studio: color sort, peg-in-hole, push-to-zone)

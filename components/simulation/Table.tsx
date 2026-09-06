@@ -12,15 +12,11 @@ export function Table() {
     <group>
       <mesh position={[0, TABLE_CENTER_Y, 0]} receiveShadow castShadow>
         <boxGeometry args={[w, h, d]} />
-        <meshStandardMaterial color="#2a313c" metalness={0.18} roughness={0.52} />
-      </mesh>
-      <mesh position={[0, TABLE_TOP_Y + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[w - 0.02, d - 0.02]} />
-        <meshStandardMaterial color="#3a4350" metalness={0.12} roughness={0.55} />
+        <meshStandardMaterial color="#323a46" metalness={0.16} roughness={0.54} />
       </mesh>
       <mesh position={[0, TABLE_TOP_Y + 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[Math.min(w, d) * 0.42, Math.min(w, d) * 0.428, 64]} />
-        <meshBasicMaterial color="#ffffff" transparent opacity={0.18} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={0.16} depthWrite={false} />
       </mesh>
       {(
         [

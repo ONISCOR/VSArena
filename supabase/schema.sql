@@ -16,6 +16,9 @@ create table if not exists agents (
   description text,
   repo_url text,
   elo_rating integer default 1200,
+  tagline text,
+  accent text not null default 'cyan',
+  avatar_id text not null default 'cobot',
   created_at timestamptz default now()
 );
 
@@ -27,7 +30,7 @@ create table if not exists matches (
   task_type text not null default 'block_stacking',
   spatial_accuracy numeric,
   task_completion_score numeric,
-  -- jsonb { peak, avg, eval?: { failure, provenance } } — extra eval keys need no migration
+  -- jsonb { peak, avg, eval?: { failure, provenance, sampler_seed, control, signature, alg } } — extra eval keys need no migration
   joint_torque_telemetry jsonb,
   elo_delta integer,
   status text default 'pending',

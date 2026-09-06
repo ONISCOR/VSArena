@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, ContactShadows } from "@react-three/drei";
+import { StudioEnv } from "@/components/simulation/StudioEnv";
 import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
 import Link from "next/link";
 import { ArenaSet } from "@/components/simulation/ArenaSet";
@@ -175,7 +176,7 @@ export function LiveViewer({ onCollapse }: { onCollapse?: () => void }) {
           shadows
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
-          camera={{ position: CAM, fov: 36, near: 0.06, far: 28 }}
+          camera={{ position: CAM, fov: 36, near: 0.04, far: 18 }}
           onCreated={({ gl }) => {
             gl.setClearColor("#12151c", 1);
             gl.toneMapping = ACESFilmicToneMapping;
@@ -184,8 +185,9 @@ export function LiveViewer({ onCollapse }: { onCollapse?: () => void }) {
           }}
         >
           <fog attach="fog" args={["#12151c", 8, 18]} />
-          <hemisphereLight args={["#c5d0dc", "#1a1e26", 0.95]} />
-          <ambientLight intensity={0.72} />
+          <StudioEnv />
+          <hemisphereLight args={["#c5d0dc", "#1a1e26", 0.62]} />
+          <ambientLight intensity={0.42} />
           <spotLight
             position={[1.8, 3.4, 1.7]}
             angle={0.62}

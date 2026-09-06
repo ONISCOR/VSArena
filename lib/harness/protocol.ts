@@ -1,3 +1,5 @@
+import type { ControlArm } from "@/lib/eval/control";
+
 /** WebSocket / local-loop contract. Assumption: joint_1..4 map to yaw, shoulder, elbow, wrist. */
 
 export const JOINT_KEYS = ["joint_1", "joint_2", "joint_3", "joint_4"] as const;
@@ -60,7 +62,7 @@ export interface ResultMessage {
   scores: {
     spatial_accuracy: number;
     task_completion_score: number;
-    joint_torque_telemetry: { peak: number; avg: number };
+    joint_torque_telemetry: { peak: number; avg: number; eval?: unknown };
   };
   elo_delta: number;
   /** Published taxonomy — policy vs protocol vs harness. */
@@ -72,6 +74,10 @@ export interface ResultMessage {
   };
   provenance?: object;
   replay?: object;
+  /** Benign control arm (public canonical) next to the scored condition. */
+  control?: ControlArm;
+  /** HMAC-SHA256 hex over the run manifest. */
+  signature?: string;
 }
 
 export interface HelloMessage {

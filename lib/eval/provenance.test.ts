@@ -7,10 +7,20 @@ describe("eval provenance", () => {
   it("stamps product, Rapier, and git sha", () => {
     const provenance = buildProvenance({
       mode: "vla",
-      scene: { set: "held_out", id: "held_out.layout-0", seed: 1, hash: "abc", private_override: false },
+      samplerSeed: 42,
+      scene: {
+        set: "held_out",
+        id: "held_out.layout-0",
+        seed: 1,
+        hash: "abc",
+        private_override: false,
+        arm: "scored",
+      },
       counters: emptyCounters(),
       env: { RENDER_GIT_COMMIT: "abcdef0123456789" },
     });
+    expect(provenance.sampler_seed).toBe(42);
+    expect(provenance.scene.arm).toBe("scored");
     expect(provenance.product).toBe(PRODUCT_VERSION);
     expect(provenance.rapier).toBe(RAPIER_VERSION);
     expect(provenance.physics_hz).toBe(60);

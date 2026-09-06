@@ -1,16 +1,13 @@
 // Assumption: in-memory only — swap for Supabase service-role inserts when keys exist.
 
+import { armFailed } from "@/lib/eval/control";
 import type { ResultMessage } from "@/lib/harness/protocol";
+import { decorateAgents, type DecoratedAgent } from "@/lib/gamification/decorate";
 import { eloDelta } from "@/lib/scoring/elo";
 import { isPublicLeaderboardAgent } from "@/lib/matches/placeholders";
+import type { AgentAccent, AgentAvatar } from "@/lib/gamification/identity";
 
-export interface ArenaAgent {
-  slug: string;
-  name: string;
-  elo: number;
-  matches: number;
-  status: "seed" | "live";
-}
+export type ArenaAgent = DecoratedAgent;
 
 export interface StoredMatch extends ResultMessage {
   agent: string;
@@ -18,10 +15,30 @@ export interface StoredMatch extends ResultMessage {
   stored_at: string;
 }
 
+interface AgentSeed {
+  slug: string;
+  name: string;
+  elo: number;
+  description: string | null;
+  tagline: string | null;
+  accent: AgentAccent;
+  avatarId: AgentAvatar;
+  createdAt: string;
+}
+
 const MAX = 80;
 
-const agents: ArenaAgent[] = [
-  { slug: "baseline-ik", name: "Baseline-IK", elo: 1200, matches: 0, status: "seed" },
+const agents: AgentSeed[] = [
+  {
+    slug: "baseline-ik",
+    name: "Baseline-IK",
+    elo: 1200,
+    description: "Geometric inverse-kinematics reference (state track, not a VLA).",
+    tagline: "House geometry seed. Not a VLA.",
+    accent: "orange",
+    avatarId: "cobot",
+    createdAt: "2026-01-01T00:00:00.000Z",
+  },
 ];
 
 const matches: StoredMatch[] = [];
@@ -38,13 +55,38 @@ export function agentSlug(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-function ensureAgent(name: string): ArenaAgent {
+function ensureAgent(name: string): AgentSeed {
   const slug = agentSlug(name);
   const existing = agents.find((agent) => agent.slug === slug);
   if (existing) return existing;
-  const created: ArenaAgent = { slug, name, elo: 1200, matches: 0, status: "live" };
+  const created: AgentSeed = {
+    slug,
+    name,
+    elo: 1200,
+    description: null,
+    tagline: null,
+    accent: "cyan",
+    avatarId: "cobot",
+    createdAt: new Date().toISOString(),
+  };
   agents.push(created);
   return created;
+}
+
+function snapshot(): ArenaAgent[] {
+  return decorateAgents(
+    agents,
+    matches.map((match) => ({
+      slug: match.agent_slug,
+      at: match.stored_at,
+      stacked: match.status === "completed" && match.scores.task_completion_score >= 1,
+      signed: Boolean(match.signature),
+      scoredFailed: armFailed(match.scores.task_completion_score, match.status),
+      controlFailed: match.control
+        ? armFailed(match.control.task_completion_score, match.control.status)
+        : null,
+    })),
+  );
 }
 
 /**
@@ -52,13 +94,14 @@ function ensureAgent(name: string): ArenaAgent {
  *
  * @example recordMatch({ agent: "Baseline-IK", ...result })
  */
-export function recordMatch(entry: Omit<StoredMatch, "elo_delta" | "agent_slug" | "stored_at"> & { agent: string }): StoredMatch {
+export function recordMatch(
+  entry: Omit<StoredMatch, "elo_delta" | "agent_slug" | "stored_at"> & { agent: string },
+): StoredMatch {
   const agent = ensureAgent(entry.agent);
   const outcome = entry.status === "failed" ? 0 : entry.scores.task_completion_score;
-  const delta = eloDelta(agent.elo, outcome, agent.matches);
+  const played = matches.filter((match) => match.agent_slug === agent.slug).length;
+  const delta = eloDelta(agent.elo, outcome, played);
   agent.elo += delta;
-  agent.matches += 1;
-  agent.status = "live";
 
   const stored: StoredMatch = {
     ...entry,
@@ -81,7 +124,19 @@ export function listMatchesForAgent(slug: string): StoredMatch[] {
 }
 
 export function getAgent(slug: string): ArenaAgent | undefined {
-  return agents.find((agent) => agent.slug === slug);
+  return snapshot().find((agent) => agent.slug === slug);
+}
+
+export function updateAgentLook(
+  slug: string,
+  patch: { tagline?: string | null; accent?: AgentAccent; avatarId?: AgentAvatar },
+): AgentSeed | undefined {
+  const agent = agents.find((row) => row.slug === slug);
+  if (!agent) return undefined;
+  if (patch.tagline !== undefined) agent.tagline = patch.tagline;
+  if (patch.accent) agent.accent = patch.accent;
+  if (patch.avatarId) agent.avatarId = patch.avatarId;
+  return agent;
 }
 
 /**
@@ -90,7 +145,7 @@ export function getAgent(slug: string): ArenaAgent | undefined {
  * @example listLeaderboard()[0].rank
  */
 export function listLeaderboard(): Array<ArenaAgent & { rank: number }> {
-  const ranked = [...agents]
+  const ranked = snapshot()
     .filter((agent) => isPublicLeaderboardAgent(agent.slug))
     .sort((a, b) => b.elo - a.elo || b.matches - a.matches || a.name.localeCompare(b.name));
   return ranked.map((agent, index) => ({ ...agent, rank: index + 1 }));

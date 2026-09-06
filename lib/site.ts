@@ -63,7 +63,3 @@ export const SIM_TABS = [
 ] as const;
 
 export type SimTabId = (typeof SIM_TABS)[number]["id"];
-
-export const PREVIEW_LEADERBOARD = [
-  { rank: 1, name: "Baseline-IK", elo: 1200, matches: 0, status: "seed" },
-] as const;

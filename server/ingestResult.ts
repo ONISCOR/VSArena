@@ -1,5 +1,6 @@
 // Assumption: Next app is reachable from this process (local: http://127.0.0.1:3000).
 
+import type { ControlArm } from "../lib/eval/control";
 import type { ResultMessage } from "../lib/harness/protocol";
 
 /**
@@ -12,6 +13,10 @@ export async function ingestOfficialResult(agent: string, result: ResultMessage)
   const base = (process.env.VSARENA_APP_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
   if (secret.length < 16) {
     console.warn("[vsarena-harness] HARNESS_INGEST_SECRET unset (<16 chars) — leaderboard not updated");
+    return;
+  }
+  if (!result.signature || !result.provenance || !result.failure) {
+    console.error("[vsarena-harness] ingest skipped — result is missing signature/provenance");
     return;
   }
   try {
@@ -31,12 +36,14 @@ export async function ingestOfficialResult(agent: string, result: ResultMessage)
           joint_torque_telemetry: {
             peak: result.scores.joint_torque_telemetry.peak,
             avg: result.scores.joint_torque_telemetry.avg,
-            ...(result.failure && result.provenance
-              ? { eval: { failure: result.failure, provenance: result.provenance } }
-              : {}),
           },
         },
         agent,
+        failure: result.failure,
+        provenance: result.provenance,
+        control: (result.control ?? null) as ControlArm | null,
+        sampler_seed: (result.provenance as { sampler_seed?: number }).sampler_seed,
+        signature: result.signature,
       }),
     });
     if (!res.ok) {

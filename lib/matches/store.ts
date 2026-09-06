@@ -4,6 +4,7 @@ import {
   listMatches as listMatchesMemory,
   listMatchesForAgent as listMatchesForAgentMemory,
   recordMatch as recordMatchMemory,
+  updateAgentLook as updateAgentLookMemory,
   type ArenaAgent,
   type StoredMatch,
 } from "@/lib/matches/memory";
@@ -14,7 +15,9 @@ import {
   listMatchesForAgentPostgres,
   listMatchesPostgres,
   recordMatchPostgres,
+  updateAgentLookPostgres,
 } from "@/lib/matches/postgres";
+import type { AgentAccent, AgentAvatar } from "@/lib/gamification/identity";
 
 export type { ArenaAgent, StoredMatch };
 
@@ -93,4 +96,21 @@ export async function listLeaderboard(): Promise<Array<ArenaAgent & { rank: numb
     }
   }
   return listLeaderboardMemory();
+}
+
+export async function updateAgentLook(
+  ownerId: string | null,
+  slug: string,
+  patch: { tagline: string | null; accent: AgentAccent; avatarId: AgentAvatar },
+): Promise<ArenaAgent | undefined> {
+  if (hasServiceRole() && ownerId) {
+    try {
+      const updated = await updateAgentLookPostgres(ownerId, slug, patch);
+      return updated ?? undefined;
+    } catch (error) {
+      logFallback("updateAgentLook", error);
+    }
+  }
+  updateAgentLookMemory(slug, patch);
+  return getAgentMemory(slug);
 }

@@ -29,10 +29,13 @@ import {
   type SpectateMessage,
 } from "../lib/harness/spectate";
 import { parseActionContract } from "../lib/eval/actionSchema";
+import { degenerateControl, shouldRunLiveControl, type ControlArm } from "../lib/eval/control";
+import { buildRunManifest, resultsSigningSecret, signRunManifest } from "../lib/eval/manifest";
 import { buildProvenance, gitSha, latencyBudgetMs, policyHz } from "../lib/eval/provenance";
 import { PHYSICS_HZ, PRODUCT_VERSION, RAPIER_VERSION } from "../lib/eval/product";
 import { buildReplayArtifact, maybeRecordReplaySample, type ReplaySample } from "../lib/eval/replay";
-import { resolveScene } from "../lib/eval/scenes";
+import { samplerSeedFromAgent } from "../lib/eval/sampler";
+import { resolveScene, type ResolvedScene } from "../lib/eval/scenes";
 import {
   INVALID_ACTION_BUDGET,
   emptyCounters,
@@ -124,6 +127,9 @@ function handleHttp(req: IncomingMessage, res: ServerResponse): void {
           physics_hz: PHYSICS_HZ,
           git_sha: gitSha(),
           scene_set: sampleScene.set,
+          sampler: "agent-name",
+          results_signed: resultsSigningSecret().length >= 16,
+          live_control: shouldRunLiveControl(sampleScene.set),
           latency_budget_ms: { vla: VLA_ACTION_TIMEOUT_MS, state: ACTION_TIMEOUT_MS },
           policy_hz: { vla: VLA_POLICY_HZ, state: HARNESS_TICK_HZ },
         },
@@ -209,25 +215,27 @@ async function handleConnection(socket: WebSocket): Promise<void> {
     const timeoutBudget = timeoutStrikeBudget(mode);
 
     const matchId = globalThis.crypto.randomUUID();
-    const scene = resolveScene({ matchId });
-    const counters: EvalCounters = emptyCounters();
-    const replaySamples: ReplaySample[] = [];
+    const samplerSeed = samplerSeedFromAgent(agentName);
+    const scoredScene = resolveScene({ matchId, samplerSeed, arm: "scored" });
+    const controlScene = resolveScene({ matchId, samplerSeed, arm: "control" });
+    const runControl = shouldRunLiveControl(scoredScene.set);
 
     console.log(
-      `[vsarena-harness] match start user=${auth.username} mode=${mode} agent=${agentName} scene=${scene.id} hz=${policyHz(mode)}`,
+      `[vsarena-harness] match start user=${auth.username} mode=${mode} agent=${agentName} seed=${samplerSeed} scene=${scoredScene.id} control=${runControl ? "live" : "degenerate"} hz=${policyHz(mode)}`,
     );
 
-    let sim: ArenaSimulation | null = null;
-    let closed = false;
-    let lastAction: ActionMessage["action"] | null = null;
-    let lastActionAt = Date.now();
-    let spectateCounter = 0;
+    const bag: EpisodeBag = {
+      lastAction: null,
+      lastActionAt: Date.now(),
+      closed: false,
+      counters: emptyCounters(),
+    };
 
     const onMessage = (data: WebSocket.RawData) => {
       const parsed = parseHarnessMessage(String(data));
       if (!isActionMessage(parsed)) {
         if (parsed && typeof parsed === "object" && (parsed as { type?: string }).type === "action") {
-          counters.invalid_actions += 1;
+          bag.counters.invalid_actions += 1;
           safeSend(socket, harnessError("protocol.schema_violation", "malformed action envelope", true));
         }
         return;
@@ -235,143 +243,99 @@ async function handleConnection(socket: WebSocket): Promise<void> {
       if (parsed.match_id !== matchId) return;
       const contract = parseActionContract(parsed.action);
       if (!contract.ok) {
-        counters.invalid_actions += 1;
+        bag.counters.invalid_actions += 1;
         safeSend(socket, harnessError("protocol.invalid_action", contract.reason, true));
         return;
       }
-      lastAction = contract.action;
-      lastActionAt = Date.now();
-      counters.consecutive_timeouts = 0;
+      bag.lastAction = contract.action;
+      bag.lastActionAt = Date.now();
+      bag.counters.consecutive_timeouts = 0;
     };
 
     socket.on("message", onMessage);
     socket.on("close", () => {
-      closed = true;
+      bag.closed = true;
     });
     socket.on("error", () => {
-      closed = true;
+      bag.closed = true;
     });
 
     try {
-      sim = await ArenaSimulation.create({ spawns: scene.spawns });
-      const tracker = createTorqueTracker();
-
-      while (!closed && socket.readyState === socket.OPEN) {
-        if (counters.invalid_actions >= INVALID_ACTION_BUDGET) {
-          await finishMatch({
-            socket,
-            sim,
-            tracker,
-            matchId,
-            agentName,
-            mode,
-            scene,
-            counters,
-            replaySamples,
-            disconnected: false,
-            timeoutBudget,
-          });
-          break;
+      let control: ControlArm | null = null;
+      if (runControl) {
+        resetEpisode(bag);
+        const controlEpisode = await runEpisode({
+          socket,
+          bag,
+          matchId,
+          agentName,
+          mode,
+          scene: controlScene,
+          step,
+          physSteps,
+          actionTimeout,
+          timeoutBudget,
+        });
+        if (controlEpisode.kind === "disconnected") {
+          console.log(`[vsarena-harness] abort harness.disconnect agent=${agentName} arm=control`);
+          return;
         }
-
-        const snapshot = sim.getCurrentSnapshot();
-        maybeRecordReplaySample(replaySamples, snapshot, mode);
-        const cap = mode === "vla" ? VLA_MATCH_MAX_TICKS : MATCH_MAX_TICKS;
-        const overtime = snapshot.tick >= cap;
-        const holding = snapshot.graspedBlockId !== null;
-        const stacked = taskCompletion(snapshot.blocks, snapshot.graspedBlockId) >= 1 && !holding;
-        if (stacked) {
-          await finishMatch({
-            socket,
-            sim,
-            tracker,
-            matchId,
-            agentName,
-            mode,
-            scene,
-            counters,
-            replaySamples,
-            disconnected: false,
-            timeoutBudget,
-          });
-          break;
-        }
-        if (counters.consecutive_timeouts >= timeoutBudget) {
-          await finishMatch({
-            socket,
-            sim,
-            tracker,
-            matchId,
-            agentName,
-            mode,
-            scene,
-            counters,
-            replaySamples,
-            disconnected: false,
-            timeoutBudget,
-          });
-          break;
-        }
-        if ((overtime && !holding) || snapshot.tick >= cap + MATCH_GRASP_GRACE_TICKS) {
-          await finishMatch({
-            socket,
-            sim,
-            tracker,
-            matchId,
-            agentName,
-            mode,
-            scene,
-            counters,
-            replaySamples,
-            disconnected: false,
-            timeoutBudget,
-          });
-          break;
-        }
-
-        const state = snapshotToState(snapshot, matchId, snapshot.tick, { mode });
-        safeSend(socket, state);
-
-        spectateCounter += 1;
-        const emitSpectate = mode === "vla" || spectateCounter % SPECTATE_STATE_EVERY === 0;
-        if (emitSpectate) {
-          broadcastSpectate(snapshotToSpectateFrame(snapshot, matchId, agentName, mode));
-        }
-
-        if (Date.now() - lastActionAt > actionTimeout) {
-          counters.action_timeouts += 1;
-          counters.consecutive_timeouts += 1;
-          lastAction = lastAction ?? {
-            joint_targets: { ...state.scene.joint_states },
-            gripper_state: "open",
-          };
-        }
-
-        if (lastAction) {
-          const prev = snapshot.joints;
-          const joints = applyAgentAction(snapshot, lastAction);
-          sim.setAgentCommand({ joints, gripperClosed: lastAction.gripper_state === "closed" });
-          sampleTorque(tracker, prev, joints);
-        }
-
-        for (let i = 0; i < physSteps; i += 1) {
-          sim.step(FIXED_DT, { held: {}, gripperToggleQueued: false, resetQueued: false });
-        }
-
-        await sleep(step * 1000);
+        control = {
+          arm: "control",
+          status: controlEpisode.status,
+          task_completion_score: controlEpisode.scores.task_completion_score,
+          spatial_accuracy: controlEpisode.scores.spatial_accuracy,
+          failure: controlEpisode.failure,
+          scene: {
+            set: "public",
+            id: "public.canonical",
+            seed: 0,
+            hash: controlScene.hash,
+          },
+          degenerate: false,
+        };
       }
 
-      if (closed && sim) {
-        maybeRecordReplaySample(replaySamples, sim.getCurrentSnapshot(), mode);
-        // Disconnect: taxonomy only, no ELO (cannot tell policy crash from network).
-        console.log(`[vsarena-harness] abort harness.disconnect agent=${agentName} scene=${scene.id}`);
+      resetEpisode(bag);
+      const scored = await runEpisode({
+        socket,
+        bag,
+        matchId,
+        agentName,
+        mode,
+        scene: scoredScene,
+        step,
+        physSteps,
+        actionTimeout,
+        timeoutBudget,
+      });
+      if (scored.kind === "disconnected") {
+        console.log(`[vsarena-harness] abort harness.disconnect agent=${agentName} scene=${scoredScene.id}`);
+        return;
       }
+
+      if (!control) {
+        control = degenerateControl({
+          status: scored.status,
+          task_completion_score: scored.scores.task_completion_score,
+          spatial_accuracy: scored.scores.spatial_accuracy,
+          failure: scored.failure,
+          hash: controlScene.hash,
+        });
+      }
+
+      await publishOfficialResult({
+        socket,
+        matchId,
+        agentName,
+        mode,
+        samplerSeed,
+        scene: scoredScene,
+        scored,
+        control,
+      });
     } finally {
       socket.off("message", onMessage);
-      if (sim) {
-        sim.setAgentCommand(null);
-        sim.dispose();
-      }
       console.log(`[vsarena-harness] match end agent=${agentName}`);
     }
   } finally {
@@ -380,66 +344,213 @@ async function handleConnection(socket: WebSocket): Promise<void> {
   }
 }
 
-async function finishMatch(input: {
+interface EpisodeBag {
+  lastAction: ActionMessage["action"] | null;
+  lastActionAt: number;
+  closed: boolean;
+  counters: EvalCounters;
+}
+
+type EpisodeDone = {
+  kind: "done";
+  scores: ReturnType<typeof scoreMatch>;
+  failure: ReturnType<typeof matchFailure>;
+  status: "completed" | "failed";
+  counters: EvalCounters;
+  replaySamples: ReplaySample[];
+};
+
+type EpisodeOutcome = EpisodeDone | { kind: "disconnected" };
+
+function resetEpisode(bag: EpisodeBag): void {
+  bag.lastAction = null;
+  bag.lastActionAt = Date.now();
+  bag.counters = emptyCounters();
+}
+
+/**
+ * One control or scored rollout on a fresh Rapier world.
+ */
+async function runEpisode(input: {
   socket: WebSocket;
-  sim: ArenaSimulation;
-  tracker: ReturnType<typeof createTorqueTracker>;
+  bag: EpisodeBag;
   matchId: string;
   agentName: string;
   mode: ObservationMode;
-  scene: ReturnType<typeof resolveScene>;
-  counters: EvalCounters;
-  replaySamples: ReplaySample[];
-  disconnected: boolean;
+  scene: ResolvedScene;
+  step: number;
+  physSteps: number;
+  actionTimeout: number;
   timeoutBudget: number;
-}): Promise<void> {
-  const snapshot = input.sim.getCurrentSnapshot();
-  maybeRecordReplaySample(input.replaySamples, snapshot, input.mode);
-  const scores = scoreMatch(snapshot.blocks, input.tracker, snapshot.graspedBlockId);
+}): Promise<EpisodeOutcome> {
+  const replaySamples: ReplaySample[] = [];
+  let sim: ArenaSimulation | null = null;
+  let spectateCounter = 0;
+  try {
+    sim = await ArenaSimulation.create({ spawns: input.scene.spawns });
+    const tracker = createTorqueTracker();
+
+    while (!input.bag.closed && input.socket.readyState === input.socket.OPEN) {
+      if (input.bag.counters.invalid_actions >= INVALID_ACTION_BUDGET) {
+        return finishEpisode(sim, tracker, replaySamples, input, false);
+      }
+
+      const snapshot = sim.getCurrentSnapshot();
+      maybeRecordReplaySample(replaySamples, snapshot, input.mode);
+      const cap = input.mode === "vla" ? VLA_MATCH_MAX_TICKS : MATCH_MAX_TICKS;
+      const overtime = snapshot.tick >= cap;
+      const holding = snapshot.graspedBlockId !== null;
+      const stacked = taskCompletion(snapshot.blocks, snapshot.graspedBlockId) >= 1 && !holding;
+      if (stacked) {
+        return finishEpisode(sim, tracker, replaySamples, input, false);
+      }
+      if (input.bag.counters.consecutive_timeouts >= input.timeoutBudget) {
+        return finishEpisode(sim, tracker, replaySamples, input, false);
+      }
+      if ((overtime && !holding) || snapshot.tick >= cap + MATCH_GRASP_GRACE_TICKS) {
+        return finishEpisode(sim, tracker, replaySamples, input, false);
+      }
+
+      const state = snapshotToState(snapshot, input.matchId, snapshot.tick, { mode: input.mode });
+      safeSend(input.socket, state);
+
+      spectateCounter += 1;
+      const emitSpectate = input.mode === "vla" || spectateCounter % SPECTATE_STATE_EVERY === 0;
+      if (emitSpectate) {
+        broadcastSpectate(snapshotToSpectateFrame(snapshot, input.matchId, input.agentName, input.mode));
+      }
+
+      if (Date.now() - input.bag.lastActionAt > input.actionTimeout) {
+        input.bag.counters.action_timeouts += 1;
+        input.bag.counters.consecutive_timeouts += 1;
+        input.bag.lastAction = input.bag.lastAction ?? {
+          joint_targets: { ...state.scene.joint_states },
+          gripper_state: "open",
+        };
+      }
+
+      if (input.bag.lastAction) {
+        const prev = snapshot.joints;
+        const joints = applyAgentAction(snapshot, input.bag.lastAction);
+        sim.setAgentCommand({ joints, gripperClosed: input.bag.lastAction.gripper_state === "closed" });
+        sampleTorque(tracker, prev, joints);
+      }
+
+      for (let i = 0; i < input.physSteps; i += 1) {
+        sim.step(FIXED_DT, { held: {}, gripperToggleQueued: false, resetQueued: false });
+      }
+
+      await sleep(input.step * 1000);
+    }
+
+    if (sim) {
+      maybeRecordReplaySample(replaySamples, sim.getCurrentSnapshot(), input.mode);
+    }
+    return { kind: "disconnected" };
+  } finally {
+    if (sim) {
+      sim.setAgentCommand(null);
+      sim.dispose();
+    }
+  }
+}
+
+function finishEpisode(
+  sim: ArenaSimulation,
+  tracker: ReturnType<typeof createTorqueTracker>,
+  replaySamples: ReplaySample[],
+  input: { bag: EpisodeBag; mode: ObservationMode; timeoutBudget: number },
+  disconnected: boolean,
+): EpisodeDone {
+  const snapshot = sim.getCurrentSnapshot();
+  maybeRecordReplaySample(replaySamples, snapshot, input.mode);
+  const scores = scoreMatch(snapshot.blocks, tracker, snapshot.graspedBlockId);
   const failure = matchFailure({
     completion: scores.task_completion_score,
-    consecutiveTimeouts: input.counters.consecutive_timeouts,
+    consecutiveTimeouts: input.bag.counters.consecutive_timeouts,
     timeoutBudget: input.timeoutBudget,
-    invalidActions: input.counters.invalid_actions,
+    invalidActions: input.bag.counters.invalid_actions,
     invalidBudget: INVALID_ACTION_BUDGET,
-    disconnected: input.disconnected,
+    disconnected,
   });
-  const status = officialMatchStatus(failure.code);
+  return {
+    kind: "done",
+    scores,
+    failure,
+    status: officialMatchStatus(failure.code),
+    counters: { ...input.bag.counters },
+    replaySamples,
+  };
+}
+
+async function publishOfficialResult(input: {
+  socket: WebSocket;
+  matchId: string;
+  agentName: string;
+  mode: ObservationMode;
+  samplerSeed: number;
+  scene: ResolvedScene;
+  scored: EpisodeDone;
+  control: ControlArm;
+}): Promise<void> {
   const provenance = buildProvenance({
     mode: input.mode,
+    samplerSeed: input.samplerSeed,
     scene: {
       set: input.scene.set,
       id: input.scene.id,
       seed: input.scene.seed,
       hash: input.scene.hash,
       private_override: input.scene.private_override,
+      arm: "scored",
     },
-    counters: input.counters,
+    counters: input.scored.counters,
   });
+  const scores = {
+    spatial_accuracy: input.scored.scores.spatial_accuracy,
+    task_completion_score: input.scored.scores.task_completion_score,
+    joint_torque_telemetry: input.scored.scores.joint_torque_telemetry,
+  };
   const result: ResultMessage = {
     type: "result",
     match_id: input.matchId,
-    status,
-    scores: {
-      spatial_accuracy: scores.spatial_accuracy,
-      task_completion_score: scores.task_completion_score,
-      joint_torque_telemetry: scores.joint_torque_telemetry,
-    },
+    status: input.scored.status,
+    scores,
     elo_delta: 0,
-    failure,
+    failure: input.scored.failure,
     provenance,
+    control: input.control,
   };
   result.replay = buildReplayArtifact({
     matchId: input.matchId,
     agent: input.agentName,
     provenance,
-    failure,
-    scores: result.scores,
-    status,
-    samples: input.replaySamples,
+    failure: input.scored.failure,
+    scores,
+    status: input.scored.status,
+    samples: input.scored.replaySamples,
   });
 
-  if (shouldIngestOfficialResult(failure)) {
+  const secret = resultsSigningSecret();
+  if (secret.length >= 16) {
+    result.signature = signRunManifest(
+      buildRunManifest({
+        match_id: input.matchId,
+        agent: input.agentName,
+        status: input.scored.status,
+        scores,
+        sampler_seed: input.samplerSeed,
+        failure: input.scored.failure,
+        provenance,
+        control: input.control,
+      }),
+      secret,
+    );
+  } else {
+    console.warn("[vsarena-harness] results signing key missing — official ingest will reject");
+  }
+
+  if (shouldIngestOfficialResult(input.scored.failure) && result.signature) {
     await ingestOfficialResult(input.agentName, result);
   }
   safeSend(input.socket, result);

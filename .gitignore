@@ -98,6 +98,7 @@ deploy/harness/README.md
 /tmp/
 /local/
 /drafts/
+/outreach/
 /my_agent.py
 /vsarena.py
 /*-agent.py
@@ -105,6 +106,11 @@ deploy/harness/README.md
 /*.local.ts
 /*.local.tsx
 /*.local.py
+# Founder outreach kits (social + cold email) — never publish
+**/outreach*.pdf
+**/outreach*.md
+**/social-posts*.pdf
+**/cold-email*.pdf
 
 # --- social / trailer production (outside or inside clone) ---
 /vsarena-trailer/
@@ -112,6 +118,20 @@ deploy/harness/README.md
 **/trailer/raw/
 **/trailer/out/
 **/trailer/assets/beat.*
+
+# --- local CAD / OpenSCAD (not VSArena) ---
+/cad/
+
+# --- local advanced-sim experiment (not VSArena) ---
+/test-simulazione-avanzata/
+/app/test-simulazione-avanzata/
+
+# --- research paper (local only, never publish) ---
+# note: /drafts/ is already ignored above; these keep the paper ignored if moved
+/paper/
+**/vsarena-paper*.md
+**/vsarena-paper*.pdf
+**/vsarena-paper*.tex
 
 # --- misc dumps ---
 *.webm

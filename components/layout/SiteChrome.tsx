@@ -11,6 +11,8 @@ import { SiteFooter } from "@/components/layout/SiteFooter";
  */
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const path = usePathname();
+  const lab = path.startsWith("/test-simulazione-avanzata");
+  if (lab) return <>{children}</>;
   const immersive = path.startsWith("/simulation");
 
   return (

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { ArenaSimulation } from "@/simulation/rapierWorld";
+import { samplerSeedFromAgent } from "@/lib/eval/sampler";
 import {
   canonicalPublicSpawns,
   resolveScene,
   seedFromId,
 } from "@/lib/eval/scenes";
+import { shouldRunLiveControl } from "@/lib/eval/control";
 
 describe("scene construction", () => {
   it("is deterministic for the same match id", () => {
@@ -31,6 +33,50 @@ describe("scene construction", () => {
   it("defaults local harness to public and production to held_out", () => {
     expect(resolveScene({ matchId: "m", env: { NODE_ENV: "development" } }).set).toBe("public");
     expect(resolveScene({ matchId: "m", env: { NODE_ENV: "production" } }).set).toBe("held_out");
+  });
+
+  it("pins held-out layouts to the submission sampler seed, not match_id", () => {
+    const seed = samplerSeedFromAgent("Ada");
+    const a = resolveScene({
+      matchId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      samplerSeed: seed,
+      arm: "scored",
+      env: { VSARENA_SCENE_SET: "held_out" },
+    });
+    const b = resolveScene({
+      matchId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      samplerSeed: seed,
+      arm: "scored",
+      env: { VSARENA_SCENE_SET: "held_out" },
+    });
+    expect(a.seed).toBe(seed);
+    expect(a.hash).toBe(b.hash);
+    expect(a.spawns).toEqual(b.spawns);
+    expect(samplerSeedFromAgent("Ada")).toBe(samplerSeedFromAgent("ada"));
+    expect(samplerSeedFromAgent("Ada")).not.toBe(samplerSeedFromAgent("Bea"));
+  });
+
+  it("keeps the control arm on the public canonical layout", () => {
+    const seed = samplerSeedFromAgent("Ada");
+    const control = resolveScene({
+      matchId: "m-control",
+      samplerSeed: seed,
+      arm: "control",
+      env: { NODE_ENV: "production", VSARENA_SCENE_SET: "held_out" },
+    });
+    const scored = resolveScene({
+      matchId: "m-control",
+      samplerSeed: seed,
+      arm: "scored",
+      env: { NODE_ENV: "production" },
+    });
+    expect(control.id).toBe("public.canonical");
+    expect(control.seed).toBe(0);
+    expect(control.set).toBe("public");
+    expect(scored.set).toBe("held_out");
+    expect(shouldRunLiveControl("held_out", {})).toBe(true);
+    expect(shouldRunLiveControl("public", {})).toBe(false);
+    expect(shouldRunLiveControl("held_out", { VSARENA_SKIP_CONTROL: "1" })).toBe(false);
   });
 
   it("accepts a private operator JSON override", () => {

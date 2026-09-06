@@ -25,7 +25,12 @@ describe("messages", () => {
     expect(Object.keys(messages.it.about)).toEqual(Object.keys(messages.en.about));
     expect(Object.keys(messages.it.studio)).toEqual(Object.keys(messages.en.studio));
     expect(Object.keys(messages.it.board)).toEqual(Object.keys(messages.en.board));
+    expect(Object.keys(messages.it.account)).toEqual(Object.keys(messages.en.account));
+    expect(Object.keys(messages.it.board.badges)).toEqual(Object.keys(messages.en.board.badges));
     expect(Object.keys(messages.it.docs)).toEqual(Object.keys(messages.en.docs));
+    expect(Object.keys(messages.it.landing)).toEqual(Object.keys(messages.en.landing));
+    expect(Object.keys(messages.it.changelog)).toEqual(Object.keys(messages.en.changelog));
+    expect(Object.keys(messages.it.ui)).toEqual(Object.keys(messages.en.ui));
   });
 
   it("fills placeholders", () => {

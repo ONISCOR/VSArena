@@ -237,6 +237,7 @@ function AuthAndKey({ ctx, showKeyHeading }: { ctx: AccountContext; showKeyHeadi
             githubUrl={ctx.githubUrl}
             apiKey={ctx.apiKey}
             agents={ctx.agents}
+            embedded
           />
         ) : (
           <p className="text-sm leading-6 text-arena-muted">

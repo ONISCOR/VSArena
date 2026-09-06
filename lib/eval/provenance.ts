@@ -16,12 +16,15 @@ export interface EvalProvenance {
   observation_mode: ObservationMode;
   latency_budget_ms: number;
   policy_hz: number;
+  /** Submission-level sampler seed. Same agent name → same seed. */
+  sampler_seed: number;
   scene: {
     set: string;
     id: string;
     seed: number;
     hash: string;
     private_override: boolean;
+    arm: "scored" | "control";
   };
   counters: EvalCounters;
 }
@@ -62,6 +65,7 @@ export function buildProvenance(input: {
   mode: ObservationMode;
   scene: EvalProvenance["scene"];
   counters: EvalCounters;
+  samplerSeed: number;
   env?: NodeJS.ProcessEnv;
 }): EvalProvenance {
   const env = input.env ?? process.env;
@@ -74,6 +78,7 @@ export function buildProvenance(input: {
     observation_mode: input.mode,
     latency_budget_ms: latencyBudgetMs(input.mode),
     policy_hz: policyHz(input.mode),
+    sampler_seed: input.samplerSeed >>> 0,
     scene: input.scene,
     counters: { ...input.counters },
   };

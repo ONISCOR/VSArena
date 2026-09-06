@@ -8,7 +8,7 @@ export const metadata = pageMetadata(
 );
 
 /**
- * Future 1v1 pit. Live work-cell is Studio v0.5.0 at /simulation.
+ * Future 1v1 pit. Live work-cell is Studio v0.6.0 at /simulation.
  *
  * @example routed at /arena
  */

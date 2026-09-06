@@ -82,21 +82,24 @@ If `ee_delta` is present (metres from current TCP), geometric IK overrides `join
     "recoverable": false
   },
   "provenance": {
-    "product": "0.5.0",
+    "product": "0.6.0",
     "rapier": "0.20.0",
     "physics_hz": 60,
     "git_sha": "…",
-    "scene": { "set": "held_out", "id": "held_out.layout-3", "seed": 1, "hash": "…", "private_override": false }
+    "sampler_seed": 123456789,
+    "scene": { "set": "held_out", "id": "held_out.layout-3", "seed": 123456789, "hash": "…", "private_override": false, "arm": "scored" }
   },
+  "control": { "arm": "control", "task_completion_score": 0, "degenerate": false },
+  "signature": "hex hmac-sha256",
   "replay": { "format": "vsarena-replay-v1", "samples": [] }
 }
 ```
 
-`elo_delta` is computed on ingest (`POST /api/matches` with `x-vsarena-ingest`). The browser **cannot** write the public board.
+`elo_delta` is computed on ingest (`POST /api/matches` with `x-vsarena-ingest`). The body must include a valid HMAC over the run manifest. The browser **cannot** write the public board.
 
 Invalid actions (`NaN` joints, unknown keys, huge `ee_delta`) are **not** applied to Rapier. After 5 contract violations the match ends as `protocol.invalid_action`. A socket drop mid-match is `harness.disconnect` and does not write ELO.
 
-Eval integrity (provenance, held-out scenes, taxonomy): [eval-integrity.md](eval-integrity.md).
+Eval integrity (sampler seed, control arm, signed manifest, provenance, held-out scenes, taxonomy): [eval-integrity.md](eval-integrity.md).
 
 ## Auth
 

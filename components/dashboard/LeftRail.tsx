@@ -36,7 +36,7 @@ export function LeftRail({ tab }: LeftRailProps) {
   const tcpPt = worldToMap(tcp[0], tcp[2]);
 
   return (
-    <aside className="flex min-h-0 flex-col gap-3 overflow-y-auto [&_.panel]:backdrop-blur-xl">
+    <aside className="flex min-h-0 flex-col gap-2 [&_.panel]:backdrop-blur-xl">
       <section className="panel overflow-hidden">
         <header className="flex items-center justify-between border-b border-white/5 px-3 py-2">
           <p className="text-xs font-medium text-white">Top-down</p>

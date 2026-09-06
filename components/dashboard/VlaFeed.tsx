@@ -40,7 +40,9 @@ export function VlaFeed() {
         className="h-[128px] w-full bg-[#07090c]"
         style={{ imageRendering: "pixelated" }}
       />
-      <p className="px-3 py-1.5 font-mono text-[10px] text-arena-muted">VLA · RGB 128×128 · no cube poses</p>
+      <p className="px-3 py-1.5 font-mono text-[10px] text-arena-muted">
+        Policy feed: top-down RGB · no cube GPS. Pixels are not the Three.js view.
+      </p>
     </section>
   );
 }

@@ -1,5 +1,6 @@
 import type { ResultMessage } from "@/lib/harness/protocol";
 import { CLIP_FORMATS, type ClipFormatId } from "@/lib/clip/formats";
+import { STUDIO_VERSION } from "@/lib/eval/product";
 
 /**
  * Caption ready to paste under the clip.
@@ -12,7 +13,7 @@ export function buildClipCaption(input: {
   result: ResultMessage | null;
 }): string {
   const { platforms } = CLIP_FORMATS[input.format];
-  const lines = [`${input.agent} · block stacking · VSArena Studio v0.5.0`];
+  const lines = [`${input.agent} · block stacking · VSArena Studio v${STUDIO_VERSION}`];
   if (input.result) {
     const { spatial_accuracy, task_completion_score } = input.result.scores;
     const elo = input.result.elo_delta;

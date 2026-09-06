@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls, ContactShadows, Line } from "@react-three/drei";
+import { StudioEnv } from "@/components/simulation/StudioEnv";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
 import { TABLE_TOP_Y } from "@/simulation/constants";
@@ -109,7 +110,7 @@ export function ArenaCanvas() {
       shadows
       dpr={[1, 2]}
       gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
-      camera={{ position: CAMERA_RIGS.orbit.position, fov: 38, near: 0.06, far: 28 }}
+      camera={{ position: CAMERA_RIGS.orbit.position, fov: 38, near: 0.04, far: 18 }}
       onCreated={({ gl }) => {
         gl.setClearColor("#12151c", 1);
         gl.toneMapping = ACESFilmicToneMapping;
@@ -118,8 +119,9 @@ export function ArenaCanvas() {
       }}
     >
       <fog attach="fog" args={["#12151c", 10, 22]} />
-      <hemisphereLight args={["#c5d0dc", "#1a1e26", 0.95]} />
-      <ambientLight intensity={0.72} />
+      <StudioEnv />
+      <hemisphereLight args={["#c5d0dc", "#1a1e26", 0.62]} />
+      <ambientLight intensity={0.42} />
       <spotLight
         position={[1.8, 3.4, 1.7]}
         angle={0.62}
@@ -130,7 +132,7 @@ export function ArenaCanvas() {
         castShadow
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
-        shadow-bias={-0.0002}
+        shadow-bias={-0.0008}
       />
       <spotLight position={[-2.0, 2.8, 1.2]} angle={0.75} penumbra={0.8} intensity={1.8} decay={0} color="#b9d4ef" />
       <pointLight position={[0.15, 2.15, 0.1]} intensity={1.6} decay={0} distance={0} color="#e8eef5" />

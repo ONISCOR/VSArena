@@ -4,6 +4,7 @@ import { ensureProfile } from "@/lib/supabase/profile";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { hasServiceRole } from "@/lib/supabase/env";
 import { createAdminSupabase } from "@/lib/supabase/admin";
+import { parseAccent, parseAvatar, parseTagline } from "@/lib/gamification/identity";
 
 export const dynamic = "force-dynamic";
 
@@ -31,12 +32,21 @@ export async function GET() {
     const profile = await loadProfile(user.id);
     if (!profile) return NextResponse.json({ error: "profile missing" }, { status: 404 });
     const client = hasServiceRole() ? createAdminSupabase() : createServerSupabase();
-    const { data: agents, error } = await client
+    const full = await client
       .from("agents")
-      .select("id, name, description, repo_url, elo_rating, created_at")
+      .select("id, name, description, repo_url, elo_rating, created_at, tagline, accent, avatar_id")
       .eq("owner_id", user.id)
       .order("created_at", { ascending: false });
-    if (error) throw error;
+    const agents = full.error
+      ? (
+          await client
+            .from("agents")
+            .select("id, name, description, repo_url, elo_rating, created_at")
+            .eq("owner_id", user.id)
+            .order("created_at", { ascending: false })
+        ).data
+      : full.data;
+    if (full.error && !agents) throw full.error;
     return NextResponse.json({ profile, agents: agents ?? [] });
   } catch (error) {
     const message = error instanceof Error ? error.message : "account failed";
@@ -52,7 +62,16 @@ export async function GET() {
 export async function POST(request: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  let body: { action?: string; name?: string; repo_url?: string; description?: string } = {};
+  let body: {
+    action?: string;
+    name?: string;
+    repo_url?: string;
+    description?: string;
+    id?: string;
+    tagline?: string;
+    accent?: string;
+    avatar_id?: string;
+  } = {};
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -92,6 +111,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     return NextResponse.json({ agent: data }, { status: 201 });
+  }
+
+  if (body.action === "update-agent") {
+    const id = (body.id ?? "").trim();
+    if (!id) return NextResponse.json({ error: "agent id required" }, { status: 400 });
+    const payload = {
+      tagline: parseTagline(body.tagline),
+      accent: parseAccent(body.accent),
+      avatar_id: parseAvatar(body.avatar_id),
+    };
+    const { data, error } = await supabase
+      .from("agents")
+      .update(payload)
+      .eq("id", id)
+      .eq("owner_id", user.id)
+      .select("id, name, description, repo_url, elo_rating, tagline, accent, avatar_id")
+      .maybeSingle();
+    if (error) {
+      const missing = error.message.toLowerCase().includes("does not exist") || error.code === "PGRST204";
+      if (missing) {
+        return NextResponse.json(
+          { error: "identity columns missing — run supabase/gamification.sql" },
+          { status: 409 },
+        );
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    if (!data) return NextResponse.json({ error: "agent not found" }, { status: 404 });
+    return NextResponse.json({ agent: data });
   }
 
   return NextResponse.json({ error: "unknown action" }, { status: 400 });

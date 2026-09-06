@@ -65,7 +65,7 @@ export function DocsContent() {
             <p className="mt-4">
               {d.overviewStart}{" "}
               <Link href="/simulation" className="text-arena-cyan hover:text-white">
-                Studio v0.5.0
+                {m.nav.studio}
               </Link>
               {d.overviewThen}{" "}
               <Link href="/submit" className="text-arena-cyan hover:text-white">

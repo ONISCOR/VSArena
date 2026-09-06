@@ -24,7 +24,7 @@ export function LandingHeroPreview() {
         <div className="relative">
           <LandingDiorama />
           <div className="pointer-events-none absolute left-3 top-3 rounded-lg border border-white/10 bg-black/55 px-2.5 py-1.5 font-mono text-[10px] text-white backdrop-blur-sm">
-            Studio v0.5.0
+            {m.nav.studio}
           </div>
         </div>
         <div className="border-t border-white/[0.06] px-3 py-2.5 font-mono text-[10px] text-arena-muted">

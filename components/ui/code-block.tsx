@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useI18n } from "@/components/i18n/LocaleProvider";
 
 interface CodeBlockProps {
   code: string;
   label?: string;
+  wrap?: boolean;
 }
 
 /**
@@ -12,7 +14,8 @@ interface CodeBlockProps {
  *
  * @example <CodeBlock label="python" code="from vsarena import Agent" />
  */
-export function CodeBlock({ code, label = "code" }: CodeBlockProps) {
+export function CodeBlock({ code, label = "code", wrap = false }: CodeBlockProps) {
+  const { m } = useI18n();
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -34,10 +37,14 @@ export function CodeBlock({ code, label = "code" }: CodeBlockProps) {
           onClick={() => void copy()}
           className="text-xs text-arena-muted hover:text-white"
         >
-          {copied ? "Copied" : "Copy"}
+          {copied ? m.ui.copied : m.ui.copy}
         </button>
       </div>
-      <pre className="overflow-x-auto p-4 font-mono text-[13px] leading-6 text-arena-fg">
+      <pre
+        className={`p-4 font-mono text-[13px] leading-6 text-arena-fg ${
+          wrap ? "whitespace-pre-wrap break-all" : "overflow-x-auto"
+        }`}
+      >
         <code>{code}</code>
       </pre>
     </div>

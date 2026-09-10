@@ -56,6 +56,7 @@ export function LivePip({ label, onExpand }: LivePipProps) {
   const blocksRef = useRef<BlockState[]>([]);
   const [status, setStatus] = useState<PipStatus>("connecting");
   const [agent, setAgent] = useState<string | null>(null);
+  const [reel, setReel] = useState(false);
   const [ready, setReady] = useState(false);
 
   const applyFrame = useCallback((frame: SpectateFrameMessage) => {
@@ -68,6 +69,7 @@ export function LivePip({ label, onExpand }: LivePipProps) {
     }));
     setAgent(frame.agent);
     setStatus("live");
+    setReel(frame.kind === "highlight");
     setReady(true);
   }, []);
 
@@ -101,9 +103,10 @@ export function LivePip({ label, onExpand }: LivePipProps) {
           applyFrame(msg);
           return;
         }
-        if (msg.type === "spectate_idle" || msg.type === "spectate_result") {
+        if (msg.type === "spectate_idle" || (msg.type === "spectate_result" && msg.kind !== "highlight")) {
           setStatus("idle");
           setAgent(null);
+          setReel(false);
           return;
         }
         if (msg.type === "spectate_error") setStatus("error");
@@ -135,7 +138,7 @@ export function LivePip({ label, onExpand }: LivePipProps) {
       className={cn(
         "group pointer-events-auto relative h-[9.5rem] w-[9.5rem] overflow-hidden rounded-xl border text-left shadow-[0_12px_40px_rgba(0,0,0,0.45)] transition",
         "border-white/15 bg-[#0c0e12] hover:border-emerald-400/40 hover:ring-1 hover:ring-emerald-400/25",
-        live && "border-emerald-400/35",
+        live && (reel ? "border-cyan-400/35" : "border-emerald-400/35"),
       )}
     >
       <div className="absolute inset-0">
@@ -173,16 +176,16 @@ export function LivePip({ label, onExpand }: LivePipProps) {
         <span
           className={cn(
             "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
-            live ? "bg-emerald-500/25 text-emerald-200" : "bg-white/10 text-arena-muted",
+            live ? (reel ? "bg-cyan-500/25 text-cyan-100" : "bg-emerald-500/25 text-emerald-200") : "bg-white/10 text-arena-muted",
           )}
         >
           <span
             className={cn(
               "h-1.5 w-1.5 rounded-full",
-              live ? "animate-pulse bg-emerald-400" : "bg-white/30",
+              live ? (reel ? "animate-pulse bg-arena-cyan" : "animate-pulse bg-emerald-400") : "bg-white/30",
             )}
           />
-          {live ? "LIVE" : status === "connecting" ? "…" : "Idle"}
+          {live ? (reel ? "REEL" : "LIVE") : status === "connecting" ? "…" : "Idle"}
         </span>
       </div>
 

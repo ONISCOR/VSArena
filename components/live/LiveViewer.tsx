@@ -13,11 +13,13 @@ import { Blocks } from "@/components/simulation/Blocks";
 import { RobotArm } from "@/components/simulation/RobotArm";
 import { Table } from "@/components/simulation/Table";
 import { TargetZone } from "@/components/simulation/TargetZone";
-import type { SpectateFrameMessage, SpectateMessage } from "@/lib/harness/spectate";
+import type { SpectateFrameMessage, SpectateKind, SpectateMessage } from "@/lib/harness/spectate";
 import { harnessHealthUrl, harnessSpectateUrl } from "@/lib/live/harnessWs";
 import { TABLE_TOP_Y } from "@/simulation/constants";
 import type { BlockState, JointState } from "@/simulation/types";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/components/i18n/LocaleProvider";
+import { fill } from "@/lib/i18n/messages";
 
 type LiveStatus = "connecting" | "idle" | "live" | "result" | "error";
 
@@ -45,9 +47,13 @@ const CAM_TARGET: [number, number, number] = [0.08, TABLE_TOP_Y + 0.1, 0];
  * @example <LiveViewer onCollapse={() => router.push("/simulation")} />
  */
 export function LiveViewer({ onCollapse }: { onCollapse?: () => void }) {
+  const { m } = useI18n();
+  const copy = m.liveView;
   const jointsRef = useRef<JointState>({ ...ZERO_JOINTS });
   const blocksRef = useRef<BlockState[]>([]);
   const [status, setStatus] = useState<LiveStatus>("connecting");
+  const [feed, setFeed] = useState<SpectateKind | null>(null);
+  const [evalWindow, setEvalWindow] = useState<string | null>(null);
   const [agent, setAgent] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   const [taskScore, setTaskScore] = useState(0);
@@ -68,6 +74,8 @@ export function LiveViewer({ onCollapse }: { onCollapse?: () => void }) {
     setTick(frame.tick);
     setTaskScore(frame.task_completion_score);
     setMode(frame.mode);
+    setFeed(frame.kind ?? "control");
+    setEvalWindow(frame.eval_window ?? null);
     setStatus("live");
     setResult(null);
     setReady(true);
@@ -113,15 +121,23 @@ export function LiveViewer({ onCollapse }: { onCollapse?: () => void }) {
           setTick(0);
           setTaskScore(0);
           setMode(null);
+          setFeed(null);
+          setEvalWindow(null);
           return;
         }
         if (msg.type === "spectate_result") {
-          setStatus("result");
           setResult({
             agent: msg.agent,
             spatial: msg.scores.spatial_accuracy,
             task: msg.scores.task_completion_score,
           });
+          if (msg.kind === "highlight") {
+            setFeed("highlight");
+            setEvalWindow(msg.eval_window ?? null);
+            setStatus("live");
+          } else {
+            setStatus("result");
+          }
           return;
         }
         if (msg.type === "spectate_error") {
@@ -151,19 +167,25 @@ export function LiveViewer({ onCollapse }: { onCollapse?: () => void }) {
   const statusLabel = useMemo(() => {
     switch (status) {
       case "connecting":
-        return "Connecting";
+        return copy.connecting;
       case "idle":
-        return "Waiting";
+        return copy.waiting;
       case "live":
-        return "LIVE";
+        return feed === "highlight" ? copy.reel : copy.live;
       case "result":
-        return "Finished";
+        return copy.finished;
       case "error":
-        return "Offline";
+        return copy.offline;
       default:
         return "";
     }
-  }, [status]);
+  }, [status, feed, copy]);
+
+  const lead = useMemo(() => {
+    if (feed === "highlight") return fill(copy.leadHighlight, { window: evalWindow ?? "—" });
+    if (status === "live" || status === "result") return copy.leadControl;
+    return copy.leadIdle;
+  }, [copy, feed, evalWindow, status]);
 
   const taskPct = Math.round(taskScore * 100);
 
@@ -241,17 +263,15 @@ export function LiveViewer({ onCollapse }: { onCollapse?: () => void }) {
               onClick={onCollapse}
               className="w-fit rounded-full border border-white/15 bg-[#07080b]/80 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-md transition-colors hover:bg-white/10"
             >
-              ← Studio
+              {copy.back}
             </button>
           ) : null}
           <div className="rounded-2xl border border-white/[0.08] bg-[#07080b]/72 px-4 py-3 backdrop-blur-md">
             <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-arena-cyan">
-              Official judge · spectator
+              {copy.kicker}
             </p>
-            <h1 className="mt-1 text-lg font-semibold tracking-tight text-white sm:text-xl">Live</h1>
-            <p className="mt-1 text-xs leading-5 text-arena-muted sm:text-sm">
-              Same run that writes ELO. Browser only mirrors poses.
-            </p>
+            <h1 className="mt-1 text-lg font-semibold tracking-tight text-white sm:text-xl">{copy.title}</h1>
+            <p className="mt-1 text-xs leading-5 text-arena-muted sm:text-sm">{lead}</p>
           </div>
         </div>
 
@@ -259,13 +279,20 @@ export function LiveViewer({ onCollapse }: { onCollapse?: () => void }) {
           <div
             className={cn(
               "flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium backdrop-blur-md",
-              status === "live"
-                ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-200"
-                : "border-white/10 bg-[#07080b]/72 text-arena-muted",
+              status === "live" && feed === "highlight"
+                ? "border-arena-cyan/30 bg-cyan-500/15 text-cyan-100"
+                : status === "live"
+                  ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-200"
+                  : "border-white/10 bg-[#07080b]/72 text-arena-muted",
             )}
           >
             {status === "live" ? (
-              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+              <span
+                className={cn(
+                  "h-2 w-2 animate-pulse rounded-full",
+                  feed === "highlight" ? "bg-arena-cyan shadow-[0_0_8px_#22d3ee]" : "bg-emerald-400 shadow-[0_0_8px_#34d399]",
+                )}
+              />
             ) : (
               <span className="h-2 w-2 rounded-full bg-white/25" />
             )}
@@ -288,7 +315,7 @@ export function LiveViewer({ onCollapse }: { onCollapse?: () => void }) {
           {status === "live" || status === "result" ? (
             <div className="rounded-xl border border-white/[0.08] bg-[#07080b]/75 px-4 py-3 backdrop-blur-md">
               <div className="mb-1.5 flex items-center justify-between text-xs text-arena-muted">
-                <span>Task completion</span>
+                <span>{copy.task}</span>
                 <span className="font-mono text-white">{taskPct}%</span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
@@ -302,10 +329,13 @@ export function LiveViewer({ onCollapse }: { onCollapse?: () => void }) {
 
           {result ? (
             <div className="rounded-xl border border-white/10 bg-[#07080b]/80 px-4 py-3 text-sm text-arena-muted backdrop-blur-md">
-              <span className="text-white">{result.agent}</span> finished — spatial{" "}
-              {(result.spatial * 100).toFixed(0)}% · task {(result.task * 100).toFixed(0)}%.{" "}
+              {fill(copy.finishedLine, {
+                agent: result.agent,
+                spatial: (result.spatial * 100).toFixed(0),
+                task: (result.task * 100).toFixed(0),
+              })}{" "}
               <Link href="/leaderboard" className="text-arena-cyan hover:text-white">
-                Leaderboard →
+                {copy.board}
               </Link>
             </div>
           ) : null}
@@ -319,18 +349,16 @@ export function LiveViewer({ onCollapse }: { onCollapse?: () => void }) {
           {status === "idle" || status === "connecting" ? (
             <div className="rounded-xl border border-white/[0.08] bg-[#07080b]/75 px-4 py-3 text-sm text-arena-muted backdrop-blur-md">
               {status === "connecting" ? (
-                <p>Waking spectator link… (Render free tier can take ~30–60s.)</p>
+                <p>{copy.waking}</p>
               ) : (
                 <p>
-                  No match right now. From your machine:{" "}
-                  <code className="text-white">VSARENA_HARNESS_URL=wss://vsarena-harness.onrender.com</code>{" "}
-                  then run ColorSeek live — this stage fills automatically.{" "}
+                  {copy.leadIdle}{" "}
                   <Link href="/account" className="text-arena-cyan hover:text-white">
-                    API key
+                    {copy.key}
                   </Link>
                   {" · "}
                   <Link href="/submit" className="text-arena-cyan hover:text-white">
-                    Submit
+                    {copy.submit}
                   </Link>
                 </p>
               )}

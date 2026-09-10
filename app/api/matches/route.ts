@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { listMatches, recordMatch } from "@/lib/matches/store";
+import { resultsEd25519Public } from "@/lib/eval/receipt";
 import { requestHasIngestSecret } from "@/lib/matches/ingestAuth";
-import { parseOfficialIngest, resultsSigningSecret } from "@/lib/matches/ingestPayload";
+import { parseOfficialIngest } from "@/lib/matches/ingestPayload";
+import { listMatches, recordMatch } from "@/lib/matches/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,8 +12,7 @@ export async function GET() {
 }
 
 /**
- * Official leaderboard write. Only the harness (ingest secret) may POST.
- * The body must carry a valid HMAC over the run manifest.
+ * Official leaderboard write. Harness-only. Body must carry digest + Ed25519 DSSE.
  *
  * @example POST /api/matches  header x-vsarena-ingest
  */
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     );
   }
   try {
-    const parsed = parseOfficialIngest(await request.json(), resultsSigningSecret());
+    const parsed = parseOfficialIngest(await request.json(), { publicKey: resultsEd25519Public() });
     if (!parsed.ok) {
       return NextResponse.json({ error: parsed.error }, { status: parsed.status });
     }

@@ -13,6 +13,8 @@ export interface SpectateBlock {
   color: string;
 }
 
+export type SpectateKind = "control" | "highlight";
+
 export interface SpectateFrameMessage {
   type: "spectate_frame";
   match_id: string;
@@ -20,6 +22,9 @@ export interface SpectateFrameMessage {
   timestamp_ms: number;
   agent: string;
   mode: ObservationMode;
+  /** control = public table of a live match; highlight = retired week's best run. */
+  kind?: SpectateKind;
+  eval_window?: string;
   joints: JointState;
   blocks: SpectateBlock[];
   grasped_block_id: string | null;
@@ -36,6 +41,8 @@ export interface SpectateResultMessage {
   match_id: string;
   agent: string;
   status: "completed" | "failed";
+  kind?: SpectateKind;
+  eval_window?: string;
   scores: {
     spatial_accuracy: number;
     task_completion_score: number;
@@ -56,6 +63,15 @@ export type SpectateMessage =
   | SpectateErrorMessage;
 
 /**
+ * Live spectator may show the public control table, never the current held-out scored layout.
+ *
+ * @example shouldBroadcastSpectate("scored", "held_out") // false
+ */
+export function shouldBroadcastSpectate(arm: "control" | "scored", sceneSet: "public" | "held_out"): boolean {
+  return arm === "control" || sceneSet === "public";
+}
+
+/**
  * Privileged snapshot → spectator wire frame (poses for Three.js, never agent actions).
  *
  * @example snapshotToSpectateFrame(snap, matchId, "ColorSeek", "vla")
@@ -65,6 +81,7 @@ export function snapshotToSpectateFrame(
   matchId: string,
   agent: string,
   mode: ObservationMode,
+  extras?: { kind?: SpectateKind; eval_window?: string },
 ): SpectateFrameMessage {
   const byId = new Map(snapshot.blocks.map((b) => [b.id, b]));
   const blocks: SpectateBlock[] = BLOCK_ORDER.map((id) => {
@@ -92,6 +109,8 @@ export function snapshotToSpectateFrame(
     timestamp_ms: Date.now(),
     agent,
     mode,
+    kind: extras?.kind,
+    eval_window: extras?.eval_window,
     joints: { ...snapshot.joints },
     blocks,
     grasped_block_id: snapshot.graspedBlockId,

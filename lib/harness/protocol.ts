@@ -76,7 +76,9 @@ export interface ResultMessage {
   replay?: object;
   /** Benign control arm (public canonical) next to the scored condition. */
   control?: ControlArm;
-  /** HMAC-SHA256 hex over the run manifest. */
+  /** SHA-256 hex of the canonical run manifest (integrity, no key). */
+  digest?: string;
+  /** Ed25519-DSSE (identity) or legacy HMAC hex. */
   signature?: string;
 }
 

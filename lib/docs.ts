@@ -116,7 +116,8 @@ export const PROTOCOL_RESULT = `{
     "message": "policy.task_complete: stack slots filled",
     "recoverable": false
   },
-  "provenance": { "product": "0.6.0", "rapier": "0.20.0", "physics_hz": 60, "git_sha": "…", "sampler_seed": 123456789 },
+  "provenance": { "product": "0.6.0", "rapier": "0.20.0", "physics_hz": 60, "git_sha": "…", "sampler_seed": 123456789, "eval_window": "2026-W37" },
   "control": { "arm": "control", "task_completion_score": 0, "degenerate": false },
-  "signature": "hex hmac-sha256"
+  "digest": "hex sha256",
+  "signature": "base64 ed25519-dsse"
 }`;

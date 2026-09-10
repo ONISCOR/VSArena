@@ -1,22 +1,29 @@
 /** Verify an official harness result before it can write ELO. */
 
 import type { ControlArm } from "@/lib/eval/control";
+import { buildRunManifest, type RunManifest } from "@/lib/eval/manifest";
 import {
-  buildRunManifest,
-  resultsSigningSecret,
-  verifyRunManifest,
-  type RunManifest,
-} from "@/lib/eval/manifest";
+  RECEIPT_ALG,
+  asPublicKey,
+  resultsEd25519Public,
+  verifyDigest,
+  verifyManifestDsse,
+} from "@/lib/eval/receipt";
 import type { EvalProvenance } from "@/lib/eval/provenance";
 import { packOfficialTelemetry } from "@/lib/eval/storedEval";
 import type { FailureRecord } from "@/lib/eval/taxonomy";
 import type { StoredMatch } from "@/lib/matches/memory";
+import type { KeyObject } from "node:crypto";
 
 export type IngestReject = { ok: false; status: 400 | 403; error: string };
 export type IngestAccept = {
   ok: true;
   entry: Omit<StoredMatch, "elo_delta" | "agent_slug" | "stored_at"> & { agent: string };
 };
+
+export interface IngestVerify {
+  publicKey?: KeyObject | string | null;
+}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
@@ -27,11 +34,11 @@ function asFinite(value: unknown): number | null {
 }
 
 /**
- * Parse + verify signature. Unsigned or tampered payloads never reach recordMatch.
+ * Parse + verify digest (integrity) and Ed25519 DSSE (identity). HMAC-only bodies are rejected.
  *
- * @example parseOfficialIngest(body, resultsSigningSecret())
+ * @example parseOfficialIngest(body, { publicKey: resultsEd25519Public() })
  */
-export function parseOfficialIngest(body: unknown, secret: string): IngestReject | IngestAccept {
+export function parseOfficialIngest(body: unknown, options: IngestVerify = {}): IngestReject | IngestAccept {
   const row = asRecord(body);
   if (!row) return { ok: false, status: 400, error: "invalid result payload" };
   if (row.type !== "result" || typeof row.match_id !== "string" || !row.match_id) {
@@ -53,18 +60,13 @@ export function parseOfficialIngest(body: unknown, secret: string): IngestReject
     return { ok: false, status: 400, error: "invalid result payload" };
   }
   const samplerSeed = asFinite(row.sampler_seed);
+  const digest = typeof row.digest === "string" ? row.digest : "";
   const signature = typeof row.signature === "string" ? row.signature : "";
   const failure = row.failure as FailureRecord | undefined;
   const provenance = row.provenance as EvalProvenance | undefined;
   const control = (row.control ?? null) as ControlArm | null;
   if (samplerSeed === null || !failure || !provenance) {
     return { ok: false, status: 400, error: "result missing sampler_seed, failure, or provenance" };
-  }
-  if (secret.length < 16) {
-    return { ok: false, status: 403, error: "results signing key missing" };
-  }
-  if (!signature) {
-    return { ok: false, status: 400, error: "unsigned result" };
   }
 
   const manifest: RunManifest = buildRunManifest({
@@ -81,7 +83,23 @@ export function parseOfficialIngest(body: unknown, secret: string): IngestReject
     provenance,
     control,
   });
-  if (!verifyRunManifest(manifest, signature, secret)) {
+
+  if (!digest) {
+    return { ok: false, status: 400, error: "result missing digest" };
+  }
+  if (!verifyDigest(manifest, digest)) {
+    return { ok: false, status: 403, error: "invalid result digest" };
+  }
+  if (!signature) {
+    return { ok: false, status: 400, error: "unsigned result" };
+  }
+
+  const publicKey =
+    options.publicKey === undefined ? resultsEd25519Public() : asPublicKey(options.publicKey);
+  if (!publicKey) {
+    return { ok: false, status: 403, error: "results public key missing" };
+  }
+  if (!verifyManifestDsse(manifest, signature, publicKey)) {
     return { ok: false, status: 403, error: "invalid result signature" };
   }
 
@@ -101,16 +119,19 @@ export function parseOfficialIngest(body: unknown, secret: string): IngestReject
           provenance,
           samplerSeed: samplerSeed >>> 0,
           control,
+          digest,
           signature,
+          alg: RECEIPT_ALG,
         }),
       },
       agent: row.agent.trim(),
       failure,
       provenance,
       control: control ?? undefined,
+      digest,
       signature,
     },
   };
 }
 
-export { resultsSigningSecret };
+export { resultsEd25519Public };

@@ -12,7 +12,7 @@
 Please report vulnerabilities that affect:
 
 - Auth / API keys (`profiles.api_key`, Supabase session)
-- Leaderboard integrity (`HARNESS_INGEST_SECRET`, signed run manifests, ingest routes)
+- Leaderboard integrity (`HARNESS_INGEST_SECRET` channel, SHA-256 digest + Ed25519 DSSE receipts, ingest routes)
 - XSS / injection in the Next.js app
 - Privilege escalation via service-role misuse patterns in docs or examples
 

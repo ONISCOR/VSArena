@@ -1,7 +1,8 @@
 /** Read/write the eval blob parked inside joint_torque_telemetry jsonb. */
 
 import type { ControlArm } from "@/lib/eval/control";
-import { MANIFEST_ALG, type RunManifest } from "@/lib/eval/manifest";
+import { HMAC_ALG, MANIFEST_VERSION, type RunManifest } from "@/lib/eval/manifest";
+import { DIGEST_ALG, RECEIPT_ALG, type ReceiptAlg } from "@/lib/eval/receipt";
 import type { EvalProvenance } from "@/lib/eval/provenance";
 import type { FailureRecord } from "@/lib/eval/taxonomy";
 
@@ -10,8 +11,10 @@ export interface OfficialEvalBlob {
   provenance: EvalProvenance;
   sampler_seed: number;
   control: ControlArm | null;
+  digest?: string;
+  digest_alg?: typeof DIGEST_ALG;
   signature: string;
-  alg: typeof MANIFEST_ALG;
+  alg: ReceiptAlg;
 }
 
 export interface TorqueTelemetry {
@@ -32,8 +35,11 @@ export function packOfficialTelemetry(input: {
   provenance: EvalProvenance;
   samplerSeed: number;
   control: ControlArm | null;
+  digest?: string;
   signature: string;
+  alg?: ReceiptAlg;
 }): TorqueTelemetry {
+  const alg = input.alg ?? (input.digest ? RECEIPT_ALG : HMAC_ALG);
   return {
     peak: input.peak,
     avg: input.avg,
@@ -42,8 +48,11 @@ export function packOfficialTelemetry(input: {
       provenance: input.provenance,
       sampler_seed: input.samplerSeed,
       control: input.control,
+      ...(input.digest
+        ? { digest: input.digest, digest_alg: DIGEST_ALG }
+        : {}),
       signature: input.signature,
-      alg: MANIFEST_ALG,
+      alg,
     },
   };
 }
@@ -105,6 +114,11 @@ function asProvenance(value: unknown): EvalProvenance | null {
   return row as unknown as EvalProvenance;
 }
 
+function asAlg(value: unknown, digest: string | undefined): ReceiptAlg {
+  if (value === RECEIPT_ALG || value === HMAC_ALG) return value;
+  return digest ? RECEIPT_ALG : HMAC_ALG;
+}
+
 /**
  * Pull peak/avg plus an official eval blob if present.
  *
@@ -120,9 +134,11 @@ export function parseTorqueTelemetry(raw: unknown): TorqueTelemetry {
   const provenance = asProvenance(blob.provenance);
   const sampler = asFiniteNumber(blob.sampler_seed);
   const signature = typeof blob.signature === "string" ? blob.signature : "";
+  const digest = typeof blob.digest === "string" ? blob.digest : undefined;
   if (!failure || !provenance || sampler === null || !signature) {
     return { peak, avg };
   }
+  const alg = asAlg(blob.alg, digest);
   return {
     peak,
     avg,
@@ -131,8 +147,10 @@ export function parseTorqueTelemetry(raw: unknown): TorqueTelemetry {
       provenance,
       sampler_seed: sampler,
       control: asControl(blob.control),
+      digest,
+      digest_alg: digest ? DIGEST_ALG : undefined,
       signature,
-      alg: MANIFEST_ALG,
+      alg,
     },
   };
 }
@@ -150,7 +168,7 @@ export function manifestFromStored(input: {
   eval: OfficialEvalBlob;
 }): RunManifest {
   return {
-    v: 1,
+    v: MANIFEST_VERSION,
     match_id: input.matchId,
     agent: input.agent,
     status: input.status,

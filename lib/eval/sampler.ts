@@ -1,6 +1,11 @@
-/** Submission-level sampler seed. Assumption: derived from the agent name, never chosen by the submitter. */
+/** Official sampler seed: one ISO-week window, same layouts for every agent. */
 
 import { seedFromId } from "@/lib/eval/scenes";
+
+export interface EvalWindowSeed {
+  seed: number;
+  window: string;
+}
 
 /**
  * Canonical id for a leaderboard submission (agent display name).
@@ -18,7 +23,51 @@ export function canonicalSubmissionId(name: string): string {
 }
 
 /**
- * Fixed uint32 sampler seed for this agent name. Same name → same seed → same official layouts.
+ * UTC ISO week id, e.g. "2026-W37". Thursday-based, week padded to two digits.
+ *
+ * @example evalWindowId(new Date("2026-09-10T12:00:00.000Z"))
+ */
+export function evalWindowId(at: Date = new Date()): string {
+  const date = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()));
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - day);
+  const year = date.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(year, 0, 1));
+  const week = Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return `${year}-W${String(week).padStart(2, "0")}`;
+}
+
+/**
+ * Previous ISO week. Highlights may reveal that window; the current one stays hidden.
+ *
+ * @example previousEvalWindowId(new Date("2026-09-10T12:00:00.000Z"))
+ */
+export function previousEvalWindowId(at: Date = new Date()): string {
+  const shifted = new Date(at.getTime() - 7 * 24 * 60 * 60 * 1000);
+  return evalWindowId(shifted);
+}
+
+/**
+ * True when a stored highlight window is already retired (safe to stream).
+ *
+ * @example isRetiredEvalWindow("2026-W36", new Date("2026-09-10T12:00:00.000Z"))
+ */
+export function isRetiredEvalWindow(window: string, at: Date = new Date()): boolean {
+  return window < evalWindowId(at);
+}
+
+/**
+ * Fixed uint32 seed for this eval week. Same week → same official layouts for every agent.
+ *
+ * @example officialSamplerSeed(new Date("2026-09-10T12:00:00.000Z"))
+ */
+export function officialSamplerSeed(at: Date = new Date()): EvalWindowSeed {
+  const window = evalWindowId(at);
+  return { seed: seedFromId(`eval:${window}`), window };
+}
+
+/**
+ * Legacy per-name seed. Not used for official ELO (name was choosable).
  *
  * @example samplerSeedFromAgent("Baseline-IK")
  */
@@ -27,7 +76,7 @@ export function samplerSeedFromAgent(name: string): number {
 }
 
 /**
- * Format a sampler seed the way the board shows it.
+ * Format a sampler seed the way the board used to show it (hex).
  *
  * @example formatSamplerSeed(255) // "000000ff"
  */

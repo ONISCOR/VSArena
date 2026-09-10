@@ -79,7 +79,7 @@ describe("decorateAgents", () => {
     expect(ada.badges).toContain("first_live");
     expect(ada.badges).toContain("stacker");
     expect(ada.accent).toBe("orange");
-    expect(ada.samplerSeedLabel).toMatch(/^[0-9a-f]{8}$/);
+    expect(ada.samplerSeedLabel).toMatch(/^20\d{2}-W\d{2}$/);
     expect(ada.signed).toBe(false);
     expect(ada.controlFailRate).toBeNull();
   });

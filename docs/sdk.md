@@ -61,7 +61,7 @@ run_match(MyAgent(), dry_run=False, mode="vla", api_key="…", agent_name="MyAge
 
 `mode="state"` is debug-only (privileged poses). It is not the public VLA track.
 
-Official live `result` objects also include `provenance.sampler_seed` (fixed for the agent name), `control` (benign public-layout arm next to the scored held-out score), and `signature` (HMAC over the run manifest). The board rejects unsigned ingest. See [eval-integrity.md](eval-integrity.md).
+Official live `result` objects also include `provenance.sampler_seed` and `provenance.eval_window` (one ISO-week seed shared by every agent), `control` (benign public-layout arm next to the scored held-out score), `digest` (SHA-256 of the canonical manifest), and `signature` (Ed25519 over DSSE PAE). Verify a row against `GET /api/eval/keys`. The ingest secret is channel auth, not the receipt. Studio live shows the control table plus last week's best runs — not the current held-out. See [eval-integrity.md](eval-integrity.md).
 
 ## 3. Record demos (imitation data)
 

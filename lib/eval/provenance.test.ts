@@ -8,6 +8,7 @@ describe("eval provenance", () => {
     const provenance = buildProvenance({
       mode: "vla",
       samplerSeed: 42,
+      evalWindow: "2026-W37",
       scene: {
         set: "held_out",
         id: "held_out.layout-0",
@@ -20,6 +21,7 @@ describe("eval provenance", () => {
       env: { RENDER_GIT_COMMIT: "abcdef0123456789" },
     });
     expect(provenance.sampler_seed).toBe(42);
+    expect(provenance.eval_window).toBe("2026-W37");
     expect(provenance.scene.arm).toBe("scored");
     expect(provenance.product).toBe(PRODUCT_VERSION);
     expect(provenance.rapier).toBe(RAPIER_VERSION);

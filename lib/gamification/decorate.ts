@@ -1,5 +1,5 @@
 import { failRate } from "@/lib/eval/control";
-import { formatSamplerSeed, samplerSeedFromAgent } from "@/lib/eval/sampler";
+import { officialSamplerSeed } from "@/lib/eval/sampler";
 import { computeBadges, HOUSE_SLUG, STREAK_WINDOW_MS, type BadgeId } from "@/lib/gamification/badges";
 import { parseAccent, parseAvatar, type AgentAccent, type AgentAvatar } from "@/lib/gamification/identity";
 
@@ -28,7 +28,7 @@ export interface DecoratedAgent {
   lastMatchAt: string | null;
   stacked: boolean;
   badges: BadgeId[];
-  /** Fixed per agent name; shown even before the first live match. */
+  /** Eval-window seed; same for every agent this ISO week. */
   samplerSeed: number;
   samplerSeedLabel: string;
   signed: boolean;
@@ -81,7 +81,8 @@ export function decorateAgents(agents: DecorateInput[], pulses: MatchPulse[], no
       if (!best || pulse.at > best.at) return pulse;
       return best;
     }, null);
-    const samplerSeed = samplerSeedFromAgent(agent.name);
+    const windowSeed = officialSamplerSeed(new Date(now));
+    const samplerSeed = windowSeed.seed;
     const controlFlags = history
       .map((pulse) => pulse.controlFailed)
       .filter((flag): flag is boolean => flag === true || flag === false);
@@ -111,7 +112,7 @@ export function decorateAgents(agents: DecorateInput[], pulses: MatchPulse[], no
         stacked,
       }),
       samplerSeed,
-      samplerSeedLabel: formatSamplerSeed(samplerSeed),
+      samplerSeedLabel: windowSeed.window,
       signed: latest?.signed === true,
       controlFailRate: failRate(controlFlags),
       scoredFailRate: failRate(scoredFlags),

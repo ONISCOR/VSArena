@@ -90,12 +90,13 @@ If `ee_delta` is present (metres from current TCP), geometric IK overrides `join
     "scene": { "set": "held_out", "id": "held_out.layout-3", "seed": 123456789, "hash": "…", "private_override": false, "arm": "scored" }
   },
   "control": { "arm": "control", "task_completion_score": 0, "degenerate": false },
-  "signature": "hex hmac-sha256",
+  "digest": "hex sha256",
+  "signature": "base64 ed25519-dsse",
   "replay": { "format": "vsarena-replay-v1", "samples": [] }
 }
 ```
 
-`elo_delta` is computed on ingest (`POST /api/matches` with `x-vsarena-ingest`). The body must include a valid HMAC over the run manifest. The browser **cannot** write the public board.
+`elo_delta` is computed on ingest (`POST /api/matches` with `x-vsarena-ingest`). The body must include a SHA-256 digest and an Ed25519 DSSE signature over the run manifest. HMAC-only bodies are rejected. The browser **cannot** write the public board. The public verify key is `GET /api/eval/keys`.
 
 Invalid actions (`NaN` joints, unknown keys, huge `ee_delta`) are **not** applied to Rapier. After 5 contract violations the match ends as `protocol.invalid_action`. A socket drop mid-match is `harness.disconnect` and does not write ELO.
 
@@ -124,9 +125,9 @@ Free tier may take 30–60s after idle (~15 min). One match at a time; a second 
 
 | type | Meaning |
 | --- | --- |
-| `spectate_idle` | No live match |
-| `spectate_frame` | Privileged joints + block poses (+ partial task score) |
-| `spectate_result` | Match ended (scores); ELO still only via ingest |
+| `spectate_idle` | No live control match and no highlight reel |
+| `spectate_frame` | Privileged joints + block poses. `kind=control` = public table of a live official match. `kind=highlight` = previous week's best scored run. Current held-out is **not** streamed. |
+| `spectate_result` | Match or highlight ended (scores); ELO still only via ingest |
 
 Browsers must never send `action` on `/spectate`.
 

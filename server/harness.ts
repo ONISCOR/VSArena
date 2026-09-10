@@ -24,17 +24,33 @@ import {
 import type { ActionMessage, HelloMessage, ObservationMode, ResultMessage } from "../lib/harness/protocol";
 import {
   isSpectatePath,
+  shouldBroadcastSpectate,
   snapshotToSpectateFrame,
   type SpectateFrameMessage,
   type SpectateMessage,
 } from "../lib/harness/spectate";
 import { parseActionContract } from "../lib/eval/actionSchema";
 import { degenerateControl, shouldRunLiveControl, type ControlArm } from "../lib/eval/control";
-import { buildRunManifest, resultsSigningSecret, signRunManifest } from "../lib/eval/manifest";
+import {
+  highlightDelayMs,
+  highlightResultMessage,
+  highlightSampleToFrame,
+  maybeRecordHighlightSample,
+  type HighlightRun,
+} from "../lib/eval/highlights";
+import { buildRunManifest } from "../lib/eval/manifest";
+import {
+  DIGEST_ALG,
+  DSSE_PAYLOAD_TYPE,
+  RECEIPT_ALG,
+  attachReceipt,
+  resultsEd25519Private,
+  resultsEd25519PublicPem,
+} from "../lib/eval/receipt";
 import { buildProvenance, gitSha, latencyBudgetMs, policyHz } from "../lib/eval/provenance";
 import { PHYSICS_HZ, PRODUCT_VERSION, RAPIER_VERSION } from "../lib/eval/product";
 import { buildReplayArtifact, maybeRecordReplaySample, type ReplaySample } from "../lib/eval/replay";
-import { samplerSeedFromAgent } from "../lib/eval/sampler";
+import { officialSamplerSeed, isRetiredEvalWindow } from "../lib/eval/sampler";
 import { resolveScene, type ResolvedScene } from "../lib/eval/scenes";
 import {
   INVALID_ACTION_BUDGET,
@@ -50,6 +66,7 @@ import {
 import { VLA_ACTION_TIMEOUT_MS, VLA_POLICY_HZ } from "../lib/vision/raster";
 import { verifyHarnessApiKey } from "./verifyApiKey";
 import { ingestOfficialResult } from "./ingestResult";
+import { fetchPublicHighlights, ingestHighlight } from "./ingestHighlight";
 
 const PORT = Number(process.env.PORT ?? process.env.HARNESS_PORT ?? 8787);
 const STATE_STEP = 1 / HARNESS_TICK_HZ;
@@ -62,6 +79,7 @@ let matchBusy = false;
 
 const spectators = new Set<WebSocket>();
 let lastSpectateFrame: SpectateFrameMessage | null = null;
+let reelToken = 0;
 
 const server = createServer((req, res) => {
   void handleHttp(req, res);
@@ -76,6 +94,7 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`[vsarena-harness] ws://0.0.0.0:${PORT}/spectate (read-only)`);
   console.log(`[vsarena-harness] eval ${PRODUCT_VERSION} rapier ${RAPIER_VERSION} sha=${gitSha().slice(0, 8)}`);
   if (prod) console.log("[vsarena-harness] NODE_ENV=production — api_key lookup required");
+  void playHighlightReel();
 });
 
 wss.on("connection", (socket, req) => {
@@ -106,15 +125,18 @@ function handleHttp(req: IncomingMessage, res: ServerResponse): void {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
     });
+    const windowSeed = officialSamplerSeed();
     const live = lastSpectateFrame
       ? {
           match_id: lastSpectateFrame.match_id,
           agent: lastSpectateFrame.agent,
           mode: lastSpectateFrame.mode,
           tick: lastSpectateFrame.tick,
+          kind: lastSpectateFrame.kind ?? null,
+          eval_window: lastSpectateFrame.eval_window ?? null,
         }
       : null;
-    const sampleScene = resolveScene({ matchId: "health" });
+    const sampleScene = resolveScene({ matchId: "health", samplerSeed: windowSeed.seed });
     res.end(
       JSON.stringify({
         ok: true,
@@ -127,9 +149,18 @@ function handleHttp(req: IncomingMessage, res: ServerResponse): void {
           physics_hz: PHYSICS_HZ,
           git_sha: gitSha(),
           scene_set: sampleScene.set,
-          sampler: "agent-name",
-          results_signed: resultsSigningSecret().length >= 16,
+          sampler: "eval-window",
+          eval_window: windowSeed.window,
+          sampler_seed: windowSeed.seed,
+          results_signed: Boolean(resultsEd25519Private()),
+          receipt: {
+            digest_alg: DIGEST_ALG,
+            signature_alg: RECEIPT_ALG,
+            payload_type: DSSE_PAYLOAD_TYPE,
+            public_key: resultsEd25519PublicPem(),
+          },
           live_control: shouldRunLiveControl(sampleScene.set),
+          live_policy: "control+previous-week-highlights",
           latency_budget_ms: { vla: VLA_ACTION_TIMEOUT_MS, state: ACTION_TIMEOUT_MS },
           policy_hz: { vla: VLA_POLICY_HZ, state: HARNESS_TICK_HZ },
         },
@@ -146,7 +177,7 @@ function handleHttp(req: IncomingMessage, res: ServerResponse): void {
  */
 function handleSpectate(socket: WebSocket): void {
   spectators.add(socket);
-  if (lastSpectateFrame && matchBusy) {
+  if (lastSpectateFrame) {
     safeSend(socket, lastSpectateFrame);
   } else {
     safeSend(socket, { type: "spectate_idle", busy: false } satisfies SpectateMessage);
@@ -165,7 +196,10 @@ function broadcastSpectate(payload: SpectateMessage): void {
   if (payload.type === "spectate_frame") {
     lastSpectateFrame = payload;
   }
-  if (payload.type === "spectate_idle" || payload.type === "spectate_result") {
+  if (payload.type === "spectate_idle") {
+    lastSpectateFrame = null;
+  }
+  if (payload.type === "spectate_result" && payload.kind !== "highlight") {
     lastSpectateFrame = null;
   }
   for (const spec of spectators) {
@@ -193,6 +227,7 @@ async function handleConnection(socket: WebSocket): Promise<void> {
   }
 
   matchBusy = true;
+  stopHighlightReel();
   let agentName = "unknown";
 
   try {
@@ -215,13 +250,14 @@ async function handleConnection(socket: WebSocket): Promise<void> {
     const timeoutBudget = timeoutStrikeBudget(mode);
 
     const matchId = globalThis.crypto.randomUUID();
-    const samplerSeed = samplerSeedFromAgent(agentName);
+    const windowSeed = officialSamplerSeed();
+    const samplerSeed = windowSeed.seed;
     const scoredScene = resolveScene({ matchId, samplerSeed, arm: "scored" });
     const controlScene = resolveScene({ matchId, samplerSeed, arm: "control" });
     const runControl = shouldRunLiveControl(scoredScene.set);
 
     console.log(
-      `[vsarena-harness] match start user=${auth.username} mode=${mode} agent=${agentName} seed=${samplerSeed} scene=${scoredScene.id} control=${runControl ? "live" : "degenerate"} hz=${policyHz(mode)}`,
+      `[vsarena-harness] match start user=${auth.username} mode=${mode} agent=${agentName} window=${windowSeed.window} seed=${samplerSeed} scene=${scoredScene.id} control=${runControl ? "live" : "degenerate"} hz=${policyHz(mode)}`,
     );
 
     const bag: EpisodeBag = {
@@ -271,6 +307,8 @@ async function handleConnection(socket: WebSocket): Promise<void> {
           agentName,
           mode,
           scene: controlScene,
+          arm: "control",
+          evalWindow: windowSeed.window,
           step,
           physSteps,
           actionTimeout,
@@ -304,6 +342,8 @@ async function handleConnection(socket: WebSocket): Promise<void> {
         agentName,
         mode,
         scene: scoredScene,
+        arm: "scored",
+        evalWindow: windowSeed.window,
         step,
         physSteps,
         actionTimeout,
@@ -330,6 +370,7 @@ async function handleConnection(socket: WebSocket): Promise<void> {
         agentName,
         mode,
         samplerSeed,
+        evalWindow: windowSeed.window,
         scene: scoredScene,
         scored,
         control,
@@ -340,7 +381,7 @@ async function handleConnection(socket: WebSocket): Promise<void> {
     }
   } finally {
     matchBusy = false;
-    broadcastSpectate({ type: "spectate_idle", busy: false });
+    void playHighlightReel();
   }
 }
 
@@ -358,6 +399,7 @@ type EpisodeDone = {
   status: "completed" | "failed";
   counters: EvalCounters;
   replaySamples: ReplaySample[];
+  highlightSamples: ReplaySample[];
 };
 
 type EpisodeOutcome = EpisodeDone | { kind: "disconnected" };
@@ -378,37 +420,44 @@ async function runEpisode(input: {
   agentName: string;
   mode: ObservationMode;
   scene: ResolvedScene;
+  arm: "control" | "scored";
+  evalWindow: string;
   step: number;
   physSteps: number;
   actionTimeout: number;
   timeoutBudget: number;
 }): Promise<EpisodeOutcome> {
   const replaySamples: ReplaySample[] = [];
+  const highlightSamples: ReplaySample[] = [];
   let sim: ArenaSimulation | null = null;
   let spectateCounter = 0;
+  const showLive = shouldBroadcastSpectate(input.arm, input.scene.set);
   try {
     sim = await ArenaSimulation.create({ spawns: input.scene.spawns });
     const tracker = createTorqueTracker();
 
     while (!input.bag.closed && input.socket.readyState === input.socket.OPEN) {
       if (input.bag.counters.invalid_actions >= INVALID_ACTION_BUDGET) {
-        return finishEpisode(sim, tracker, replaySamples, input, false);
+        return finishEpisode(sim, tracker, replaySamples, highlightSamples, input, false);
       }
 
       const snapshot = sim.getCurrentSnapshot();
       maybeRecordReplaySample(replaySamples, snapshot, input.mode);
+      if (input.arm === "scored") {
+        maybeRecordHighlightSample(highlightSamples, snapshot, input.mode);
+      }
       const cap = input.mode === "vla" ? VLA_MATCH_MAX_TICKS : MATCH_MAX_TICKS;
       const overtime = snapshot.tick >= cap;
       const holding = snapshot.graspedBlockId !== null;
       const stacked = taskCompletion(snapshot.blocks, snapshot.graspedBlockId) >= 1 && !holding;
       if (stacked) {
-        return finishEpisode(sim, tracker, replaySamples, input, false);
+        return finishEpisode(sim, tracker, replaySamples, highlightSamples, input, false);
       }
       if (input.bag.counters.consecutive_timeouts >= input.timeoutBudget) {
-        return finishEpisode(sim, tracker, replaySamples, input, false);
+        return finishEpisode(sim, tracker, replaySamples, highlightSamples, input, false);
       }
       if ((overtime && !holding) || snapshot.tick >= cap + MATCH_GRASP_GRACE_TICKS) {
-        return finishEpisode(sim, tracker, replaySamples, input, false);
+        return finishEpisode(sim, tracker, replaySamples, highlightSamples, input, false);
       }
 
       const state = snapshotToState(snapshot, input.matchId, snapshot.tick, { mode: input.mode });
@@ -416,8 +465,13 @@ async function runEpisode(input: {
 
       spectateCounter += 1;
       const emitSpectate = input.mode === "vla" || spectateCounter % SPECTATE_STATE_EVERY === 0;
-      if (emitSpectate) {
-        broadcastSpectate(snapshotToSpectateFrame(snapshot, input.matchId, input.agentName, input.mode));
+      if (showLive && emitSpectate) {
+        broadcastSpectate(
+          snapshotToSpectateFrame(snapshot, input.matchId, input.agentName, input.mode, {
+            kind: "control",
+            eval_window: input.evalWindow,
+          }),
+        );
       }
 
       if (Date.now() - input.bag.lastActionAt > input.actionTimeout) {
@@ -444,7 +498,11 @@ async function runEpisode(input: {
     }
 
     if (sim) {
-      maybeRecordReplaySample(replaySamples, sim.getCurrentSnapshot(), input.mode);
+      const last = sim.getCurrentSnapshot();
+      maybeRecordReplaySample(replaySamples, last, input.mode);
+      if (input.arm === "scored") {
+        maybeRecordHighlightSample(highlightSamples, last, input.mode);
+      }
     }
     return { kind: "disconnected" };
   } finally {
@@ -459,11 +517,15 @@ function finishEpisode(
   sim: ArenaSimulation,
   tracker: ReturnType<typeof createTorqueTracker>,
   replaySamples: ReplaySample[],
-  input: { bag: EpisodeBag; mode: ObservationMode; timeoutBudget: number },
+  highlightSamples: ReplaySample[],
+  input: { bag: EpisodeBag; mode: ObservationMode; timeoutBudget: number; arm: "control" | "scored" },
   disconnected: boolean,
 ): EpisodeDone {
   const snapshot = sim.getCurrentSnapshot();
   maybeRecordReplaySample(replaySamples, snapshot, input.mode);
+  if (input.arm === "scored") {
+    maybeRecordHighlightSample(highlightSamples, snapshot, input.mode);
+  }
   const scores = scoreMatch(snapshot.blocks, tracker, snapshot.graspedBlockId);
   const failure = matchFailure({
     completion: scores.task_completion_score,
@@ -480,6 +542,7 @@ function finishEpisode(
     status: officialMatchStatus(failure.code),
     counters: { ...input.bag.counters },
     replaySamples,
+    highlightSamples,
   };
 }
 
@@ -489,6 +552,7 @@ async function publishOfficialResult(input: {
   agentName: string;
   mode: ObservationMode;
   samplerSeed: number;
+  evalWindow: string;
   scene: ResolvedScene;
   scored: EpisodeDone;
   control: ControlArm;
@@ -496,6 +560,7 @@ async function publishOfficialResult(input: {
   const provenance = buildProvenance({
     mode: input.mode,
     samplerSeed: input.samplerSeed,
+    evalWindow: input.evalWindow,
     scene: {
       set: input.scene.set,
       id: input.scene.id,
@@ -531,27 +596,42 @@ async function publishOfficialResult(input: {
     samples: input.scored.replaySamples,
   });
 
-  const secret = resultsSigningSecret();
-  if (secret.length >= 16) {
-    result.signature = signRunManifest(
-      buildRunManifest({
-        match_id: input.matchId,
-        agent: input.agentName,
-        status: input.scored.status,
-        scores,
-        sampler_seed: input.samplerSeed,
-        failure: input.scored.failure,
-        provenance,
-        control: input.control,
-      }),
-      secret,
-    );
+  const manifest = buildRunManifest({
+    match_id: input.matchId,
+    agent: input.agentName,
+    status: input.scored.status,
+    scores,
+    sampler_seed: input.samplerSeed,
+    failure: input.scored.failure,
+    provenance,
+    control: input.control,
+  });
+  const privateKey = resultsEd25519Private();
+  if (privateKey) {
+    const receipt = attachReceipt(manifest, privateKey);
+    result.digest = receipt.digest;
+    result.signature = receipt.signature;
   } else {
-    console.warn("[vsarena-harness] results signing key missing — official ingest will reject");
+    console.warn("[vsarena-harness] Ed25519 private key missing — official ingest will reject");
   }
 
-  if (shouldIngestOfficialResult(input.scored.failure) && result.signature) {
+  if (shouldIngestOfficialResult(input.scored.failure) && result.digest && result.signature) {
     await ingestOfficialResult(input.agentName, result);
+    if (input.scored.highlightSamples.length > 0) {
+      const highlight: HighlightRun = {
+        match_id: input.matchId,
+        agent: input.agentName,
+        eval_window: input.evalWindow,
+        sampler_seed: input.samplerSeed,
+        mode: input.mode,
+        scores: {
+          spatial_accuracy: input.scored.scores.spatial_accuracy,
+          task_completion_score: input.scored.scores.task_completion_score,
+        },
+        samples: input.scored.highlightSamples,
+      };
+      await ingestHighlight(highlight);
+    }
   }
   safeSend(input.socket, result);
   broadcastSpectate({
@@ -593,4 +673,36 @@ function safeSend(socket: WebSocket, payload: unknown): void {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function stopHighlightReel(): void {
+  reelToken += 1;
+}
+
+/**
+ * Loop last week's best scored runs on /spectate while the judge is idle.
+ */
+async function playHighlightReel(): Promise<void> {
+  const token = ++reelToken;
+  const runs = (await fetchPublicHighlights()).filter((run) => isRetiredEvalWindow(run.eval_window));
+  if (token !== reelToken || matchBusy) return;
+  if (runs.length === 0) {
+    broadcastSpectate({ type: "spectate_idle", busy: false });
+    return;
+  }
+  let index = 0;
+  while (token === reelToken && !matchBusy) {
+    const run = runs[index % runs.length];
+    if (!run || run.samples.length === 0) break;
+    for (let i = 0; i < run.samples.length; i += 1) {
+      if (token !== reelToken || matchBusy) return;
+      broadcastSpectate(highlightSampleToFrame(run, run.samples[i]));
+      const next = run.samples[i + 1];
+      await sleep(next ? highlightDelayMs(run.samples[i].tick, next.tick) : 600);
+    }
+    if (token !== reelToken || matchBusy) return;
+    broadcastSpectate(highlightResultMessage(run));
+    await sleep(2200);
+    index += 1;
+  }
 }

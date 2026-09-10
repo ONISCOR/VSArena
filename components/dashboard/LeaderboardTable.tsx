@@ -119,7 +119,7 @@ export function LeaderboardTable({ rows }: { rows: Row[] }) {
                 </td>
                 <td className="px-4 py-3 align-middle text-arena-cyan">{row.elo}</td>
                 <td className="px-4 py-3 align-middle text-arena-muted">{row.matches}</td>
-                <td className="px-4 py-3 align-middle font-mono text-xs text-arena-muted" title={b.seedHint}>
+                <td className="px-4 py-3 align-middle whitespace-nowrap font-mono text-xs text-arena-muted" title={b.seedHint}>
                   {row.samplerSeedLabel}
                 </td>
                 <td className="px-4 py-3 align-middle text-xs text-arena-muted" title={b.controlHint}>

@@ -2,7 +2,7 @@
 
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { armFailed } from "@/lib/eval/control";
-import { resultsSigningSecret, verifyRunManifest } from "@/lib/eval/manifest";
+import { verifyStoredReceipt } from "@/lib/eval/receipt";
 import { manifestFromStored, parseTorqueTelemetry } from "@/lib/eval/storedEval";
 import { dedupeAgentRows } from "@/lib/matches/dedupe";
 import { agentSlug, type ArenaAgent, type StoredMatch } from "@/lib/matches/memory";
@@ -114,9 +114,7 @@ function isStoredRowSigned(input: {
 }): boolean {
   const blob = input.telemetry.eval;
   if (!blob?.signature) return false;
-  const secret = resultsSigningSecret();
-  if (secret.length < 16) return false;
-  return verifyRunManifest(
+  return verifyStoredReceipt(
     manifestFromStored({
       matchId: input.matchId,
       agent: input.agent,
@@ -129,8 +127,7 @@ function isStoredRowSigned(input: {
       },
       eval: blob,
     }),
-    blob.signature,
-    secret,
+    blob,
   );
 }
 

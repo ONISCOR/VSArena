@@ -156,7 +156,7 @@ function parsePrivateJson(raw: string): BlockSpawn[] | null {
 
 /**
  * Official vs Studio scene. Production harness defaults to held_out.
- * Pass `samplerSeed` (per submission) so two runs of the same agent share layouts.
+ * Pass `samplerSeed` (eval-window) so every agent in the same week shares layouts.
  * `arm: "control"` is always the public canonical layout (no jitter).
  *
  * @example resolveScene({ matchId: "uuid", samplerSeed, arm: "scored" })

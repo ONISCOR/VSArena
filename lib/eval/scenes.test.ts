@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ArenaSimulation } from "@/simulation/rapierWorld";
-import { samplerSeedFromAgent } from "@/lib/eval/sampler";
+import { officialSamplerSeed } from "@/lib/eval/sampler";
 import {
   canonicalPublicSpawns,
   resolveScene,
@@ -35,8 +35,8 @@ describe("scene construction", () => {
     expect(resolveScene({ matchId: "m", env: { NODE_ENV: "production" } }).set).toBe("held_out");
   });
 
-  it("pins held-out layouts to the submission sampler seed, not match_id", () => {
-    const seed = samplerSeedFromAgent("Ada");
+  it("pins held-out layouts to the eval-window sampler seed, not match_id", () => {
+    const seed = officialSamplerSeed(new Date("2026-09-10T12:00:00.000Z")).seed;
     const a = resolveScene({
       matchId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       samplerSeed: seed,
@@ -52,12 +52,10 @@ describe("scene construction", () => {
     expect(a.seed).toBe(seed);
     expect(a.hash).toBe(b.hash);
     expect(a.spawns).toEqual(b.spawns);
-    expect(samplerSeedFromAgent("Ada")).toBe(samplerSeedFromAgent("ada"));
-    expect(samplerSeedFromAgent("Ada")).not.toBe(samplerSeedFromAgent("Bea"));
   });
 
   it("keeps the control arm on the public canonical layout", () => {
-    const seed = samplerSeedFromAgent("Ada");
+    const seed = officialSamplerSeed(new Date("2026-09-10T12:00:00.000Z")).seed;
     const control = resolveScene({
       matchId: "m-control",
       samplerSeed: seed,

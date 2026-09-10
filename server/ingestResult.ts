@@ -15,8 +15,8 @@ export async function ingestOfficialResult(agent: string, result: ResultMessage)
     console.warn("[vsarena-harness] HARNESS_INGEST_SECRET unset (<16 chars) — leaderboard not updated");
     return;
   }
-  if (!result.signature || !result.provenance || !result.failure) {
-    console.error("[vsarena-harness] ingest skipped — result is missing signature/provenance");
+  if (!result.digest || !result.signature || !result.provenance || !result.failure) {
+    console.error("[vsarena-harness] ingest skipped — result is missing digest/signature/provenance");
     return;
   }
   try {
@@ -43,6 +43,7 @@ export async function ingestOfficialResult(agent: string, result: ResultMessage)
         provenance: result.provenance,
         control: (result.control ?? null) as ControlArm | null,
         sampler_seed: (result.provenance as { sampler_seed?: number }).sampler_seed,
+        digest: result.digest,
         signature: result.signature,
       }),
     });

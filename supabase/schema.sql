@@ -124,3 +124,6 @@ create trigger on_auth_user_created
 
 -- Public clients must not read api_key. Account + harness use the service role.
 revoke select (api_key) on table public.profiles from anon, authenticated;
+
+-- Weekly highlight reel (previous ISO week only on GET /api/highlights): see highlights.sql
+

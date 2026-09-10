@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSpectatePath, snapshotToSpectateFrame } from "@/lib/harness/spectate";
+import { isSpectatePath, shouldBroadcastSpectate, snapshotToSpectateFrame } from "@/lib/harness/spectate";
 import type { SimulationSnapshot } from "@/simulation/types";
 
 function emptySnap(tick: number): SimulationSnapshot {
@@ -58,6 +58,12 @@ describe("spectate", () => {
     expect(isSpectatePath("/spectate")).toBe(true);
     expect(isSpectatePath("/spectate/")).toBe(true);
     expect(isSpectatePath("/")).toBe(false);
+  });
+
+  it("does not stream the current held-out scored layout", () => {
+    expect(shouldBroadcastSpectate("control", "held_out")).toBe(true);
+    expect(shouldBroadcastSpectate("scored", "public")).toBe(true);
+    expect(shouldBroadcastSpectate("scored", "held_out")).toBe(false);
   });
 
   it("orders blocks cyan → orange → magenta", () => {

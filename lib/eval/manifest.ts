@@ -1,11 +1,12 @@
-/** HMAC-SHA256 over the official run manifest. Assumption: secret is server-only (≥16 chars). */
+/** HMAC-SHA256 over the official run manifest. Legacy row verify only — new receipts are digest + Ed25519. */
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { ControlArm } from "@/lib/eval/control";
 import type { EvalProvenance } from "@/lib/eval/provenance";
 import type { FailureRecord } from "@/lib/eval/taxonomy";
 
-export const MANIFEST_ALG = "hmac-sha256";
+export const HMAC_ALG = "hmac-sha256";
+export const MANIFEST_ALG = HMAC_ALG;
 export const MANIFEST_VERSION = 1;
 
 export interface RunManifest {

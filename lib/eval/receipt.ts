@@ -41,8 +41,47 @@ function manifestBytes(manifest: RunManifest): Buffer {
   return Buffer.from(stableStringify(manifest), "utf8");
 }
 
-function normalizePem(raw: string): string {
-  return raw.replace(/\\n/g, "\n").trim();
+function unwrapQuotes(raw: string): string {
+  const s = raw.trim();
+  if (
+    (s.startsWith('"') && s.endsWith('"') && s.length >= 2) ||
+    (s.startsWith("'") && s.endsWith("'") && s.length >= 2)
+  ) {
+    return s.slice(1, -1).trim();
+  }
+  return s;
+}
+
+function looksLikeBase64(raw: string): boolean {
+  const compact = raw.replace(/\s+/g, "");
+  return compact.length >= 44 && /^[A-Za-z0-9+/]+=*$/.test(compact);
+}
+
+function asPemBlock(kind: "PRIVATE KEY" | "PUBLIC KEY", body: string): string {
+  return `-----BEGIN ${kind}-----\n${body.replace(/\s+/g, "")}\n-----END ${kind}-----`;
+}
+
+/**
+ * Accept dotenv `\n`, quoted values, real newlines, or a concatenated one-line PEM.
+ *
+ * @example normalizePem("-----BEGIN PUBLIC KEY-----MCow...-----END PUBLIC KEY-----")
+ */
+export function normalizePem(raw: string): string {
+  let s = unwrapQuotes(raw);
+  s = s.replace(/\\r\\n/g, "\n").replace(/\\n/g, "\n").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+  s = s.replace(/-----BEGIN ([A-Z ]+)-----[ \t]*/g, "-----BEGIN $1-----\n");
+  s = s.replace(/[ \t]*-----END /g, "\n-----END ");
+  return s.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function pemFromEnv(
+  env: NodeJS.ProcessEnv | undefined,
+  name: "VSARENA_RESULTS_ED25519_PRIVATE" | "VSARENA_RESULTS_ED25519_PUBLIC",
+): string {
+  if (env) return env[name] ?? "";
+  // Static identifiers so Next 14 includes these keys on the Vercel server graph.
+  if (name === "VSARENA_RESULTS_ED25519_PRIVATE") return process.env.VSARENA_RESULTS_ED25519_PRIVATE ?? "";
+  return process.env.VSARENA_RESULTS_ED25519_PUBLIC ?? "";
 }
 
 /**
@@ -132,26 +171,62 @@ export function generateEvalKeyPair(): EvalKeyPair {
   };
 }
 
-export function parseEd25519Private(pem: string): KeyObject | null {
-  const normalized = normalizePem(pem);
-  if (!normalized.includes("PRIVATE KEY")) return null;
+function tryEd25519Private(pemOrDer: string): KeyObject | null {
+  const normalized = normalizePem(pemOrDer);
+  const pem = normalized.includes("PRIVATE KEY")
+    ? normalized
+    : looksLikeBase64(normalized)
+      ? asPemBlock("PRIVATE KEY", normalized)
+      : "";
+  if (pem) {
+    try {
+      const key = createPrivateKey(pem);
+      if (key.asymmetricKeyType === "ed25519") return key;
+    } catch {
+      /* DER fallback */
+    }
+  }
+  const b64 = (pem || normalized).replace(/-----[-A-Z ]+-----/g, "").replace(/\s+/g, "");
+  if (!looksLikeBase64(b64)) return null;
   try {
-    const key = createPrivateKey(normalized);
+    const key = createPrivateKey({ key: Buffer.from(b64, "base64"), format: "der", type: "pkcs8" });
     return key.asymmetricKeyType === "ed25519" ? key : null;
   } catch {
     return null;
   }
 }
 
-export function parseEd25519Public(pem: string): KeyObject | null {
-  const normalized = normalizePem(pem);
-  if (!normalized.includes("PUBLIC KEY")) return null;
+function tryEd25519Public(pemOrDer: string): KeyObject | null {
+  const normalized = normalizePem(pemOrDer);
+  const pem = normalized.includes("PUBLIC KEY")
+    ? normalized
+    : looksLikeBase64(normalized)
+      ? asPemBlock("PUBLIC KEY", normalized)
+      : "";
+  if (pem) {
+    try {
+      const key = createPublicKey(pem);
+      if (key.asymmetricKeyType === "ed25519") return key;
+    } catch {
+      /* DER fallback */
+    }
+  }
+  const b64 = (pem || normalized).replace(/-----[-A-Z ]+-----/g, "").replace(/\s+/g, "");
+  if (!looksLikeBase64(b64)) return null;
   try {
-    const key = createPublicKey(normalized);
+    const key = createPublicKey({ key: Buffer.from(b64, "base64"), format: "der", type: "spki" });
     return key.asymmetricKeyType === "ed25519" ? key : null;
   } catch {
     return null;
   }
+}
+
+export function parseEd25519Private(pem: string): KeyObject | null {
+  return tryEd25519Private(pem);
+}
+
+export function parseEd25519Public(pem: string): KeyObject | null {
+  return tryEd25519Public(pem);
 }
 
 export function exportPublicKeyPem(key: KeyObject): string {
@@ -159,12 +234,12 @@ export function exportPublicKeyPem(key: KeyObject): string {
 }
 
 /**
- * Harness signing key. PKCS8 PEM; `\n` in the env value is fine.
+ * Harness signing key. PKCS8 PEM, concatenated PEM, or raw PKCS8 base64.
  *
  * @example resultsEd25519Private()
  */
-export function resultsEd25519Private(env: NodeJS.ProcessEnv = process.env): KeyObject | null {
-  return parseEd25519Private(env.VSARENA_RESULTS_ED25519_PRIVATE ?? "");
+export function resultsEd25519Private(env?: NodeJS.ProcessEnv): KeyObject | null {
+  return parseEd25519Private(pemFromEnv(env, "VSARENA_RESULTS_ED25519_PRIVATE"));
 }
 
 /**
@@ -172,15 +247,15 @@ export function resultsEd25519Private(env: NodeJS.ProcessEnv = process.env): Key
  *
  * @example resultsEd25519Public()
  */
-export function resultsEd25519Public(env: NodeJS.ProcessEnv = process.env): KeyObject | null {
-  const fromPublic = parseEd25519Public(env.VSARENA_RESULTS_ED25519_PUBLIC ?? "");
+export function resultsEd25519Public(env?: NodeJS.ProcessEnv): KeyObject | null {
+  const fromPublic = parseEd25519Public(pemFromEnv(env, "VSARENA_RESULTS_ED25519_PUBLIC"));
   if (fromPublic) return fromPublic;
   const priv = resultsEd25519Private(env);
   if (!priv) return null;
   return createPublicKey(priv);
 }
 
-export function resultsEd25519PublicPem(env: NodeJS.ProcessEnv = process.env): string | null {
+export function resultsEd25519PublicPem(env?: NodeJS.ProcessEnv): string | null {
   const key = resultsEd25519Public(env);
   return key ? exportPublicKeyPem(key) : null;
 }
@@ -199,7 +274,7 @@ export function asPublicKey(value: KeyObject | string | null | undefined): KeyOb
 export function verifyStoredReceipt(
   manifest: RunManifest,
   blob: { digest?: string; signature: string; alg?: string },
-  env: NodeJS.ProcessEnv = process.env,
+  env?: NodeJS.ProcessEnv,
 ): boolean {
   if (blob.alg === RECEIPT_ALG || (blob.digest && blob.alg !== HMAC_ALG)) {
     if (!blob.digest || !verifyDigest(manifest, blob.digest)) return false;

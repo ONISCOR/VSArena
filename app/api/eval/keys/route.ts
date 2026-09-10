@@ -8,7 +8,10 @@ export const dynamic = "force-dynamic";
  * Published eval receipt key. Submitters verify a row offline against this PEM.
  */
 export async function GET() {
-  const public_key = resultsEd25519PublicPem();
+  const public_key = resultsEd25519PublicPem({
+    VSARENA_RESULTS_ED25519_PUBLIC: process.env.VSARENA_RESULTS_ED25519_PUBLIC,
+    VSARENA_RESULTS_ED25519_PRIVATE: process.env.VSARENA_RESULTS_ED25519_PRIVATE,
+  });
   return NextResponse.json({
     digest_alg: DIGEST_ALG,
     signature_alg: RECEIPT_ALG,

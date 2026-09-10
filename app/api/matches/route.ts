@@ -24,7 +24,12 @@ export async function POST(request: Request) {
     );
   }
   try {
-    const parsed = parseOfficialIngest(await request.json(), { publicKey: resultsEd25519Public() });
+    const parsed = parseOfficialIngest(await request.json(), {
+      publicKey: resultsEd25519Public({
+        VSARENA_RESULTS_ED25519_PUBLIC: process.env.VSARENA_RESULTS_ED25519_PUBLIC,
+        VSARENA_RESULTS_ED25519_PRIVATE: process.env.VSARENA_RESULTS_ED25519_PRIVATE,
+      }),
+    });
     if (!parsed.ok) {
       return NextResponse.json({ error: parsed.error }, { status: parsed.status });
     }

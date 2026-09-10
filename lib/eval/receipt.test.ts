@@ -10,6 +10,7 @@ import {
   digestRunManifest,
   dssePae,
   generateEvalKeyPair,
+  normalizePem,
   parseEd25519Private,
   parseEd25519Public,
   resultsEd25519Public,
@@ -131,6 +132,24 @@ describe("Ed25519 DSSE identity", () => {
       VSARENA_RESULTS_ED25519_PUBLIC: keys.publicPem.replace(/\n/g, "\\n"),
     };
     expect(resultsEd25519Public(env)?.export({ type: "spki", format: "pem" }).toString()).toBe(keys.publicPem);
+  });
+
+  it("loads concatenated, quoted, and raw-base64 env values", () => {
+    const keys = generateEvalKeyPair();
+    const publicBody = keys.publicPem.replace(/-----[-A-Z ]+-----/g, "").replace(/\s+/g, "");
+    const privateBody = keys.privatePem.replace(/-----[-A-Z ]+-----/g, "").replace(/\s+/g, "");
+    expect(parseEd25519Public(`-----BEGIN PUBLIC KEY-----${publicBody}-----END PUBLIC KEY-----`)?.asymmetricKeyType).toBe(
+      "ed25519",
+    );
+    expect(parseEd25519Public(`"${keys.publicPem.replace(/\n/g, "\\n")}"`)?.asymmetricKeyType).toBe("ed25519");
+    expect(parseEd25519Public(publicBody)?.asymmetricKeyType).toBe("ed25519");
+    expect(parseEd25519Private(privateBody)?.asymmetricKeyType).toBe("ed25519");
+    expect(normalizePem(`-----BEGIN PUBLIC KEY-----${publicBody}-----END PUBLIC KEY-----`)).toContain("\n");
+    expect(
+      resultsEd25519Public({ VSARENA_RESULTS_ED25519_PUBLIC: publicBody })
+        ?.export({ type: "spki", format: "pem" })
+        .toString(),
+    ).toBe(keys.publicPem);
   });
 });
 

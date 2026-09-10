@@ -40,8 +40,8 @@ Studio (`/simulation`) is still the **public canonical** layout. Official ELO is
 | `VSARENA_HELD_OUT_JSON` | unset | Private three-cube JSON; sets `provenance.scene.private_override` |
 | `VSARENA_SKIP_CONTROL` | unset | `1` skips the live control episode (local debug). Production should leave this unset. |
 | `HARNESS_INGEST_SECRET` | unset | ≥16 chars. Header `x-vsarena-ingest` (channel auth). Not the public receipt. |
-| `VSARENA_RESULTS_ED25519_PRIVATE` | unset | PKCS8 PEM. Harness signs DSSE. `\n` escaped newlines ok. |
-| `VSARENA_RESULTS_ED25519_PUBLIC` | derived from private | SPKI PEM published on `/api/eval/keys` and harness `/health`. |
+| `VSARENA_RESULTS_ED25519_PRIVATE` | unset | PKCS8 PEM (quoted `\n`, concatenated one-liner, or raw PKCS8 base64). Harness signs DSSE. |
+| `VSARENA_RESULTS_ED25519_PUBLIC` | derived from private | SPKI PEM published on `/api/eval/keys` and harness `/health`. Same formats. On Vercel paste a real multiline PEM, then Redeploy. |
 | `VSARENA_RESULTS_SIGNING_KEY` | ingest secret | Legacy HMAC key for pre-Ed25519 rows only. |
 | `RENDER_GIT_COMMIT` / `VERCEL_GIT_COMMIT_SHA` / `GIT_COMMIT` | `unknown` | SHA stamped on results |
 

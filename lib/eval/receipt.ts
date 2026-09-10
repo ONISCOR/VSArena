@@ -23,6 +23,9 @@ export const DSSE_PAYLOAD_TYPE = "application/vnd.vsarena.run-manifest+json";
 
 export type ReceiptAlg = typeof RECEIPT_ALG | typeof HMAC_ALG;
 
+/** Key bag for tests and Next route handlers. Avoid `ProcessEnv` (NODE_ENV is required). */
+export type EvalKeyEnv = Record<string, string | undefined>;
+
 export interface ManifestReceipt {
   digest: string;
   digest_alg: typeof DIGEST_ALG;
@@ -75,7 +78,7 @@ export function normalizePem(raw: string): string {
 }
 
 function pemFromEnv(
-  env: NodeJS.ProcessEnv | undefined,
+  env: EvalKeyEnv | undefined,
   name: "VSARENA_RESULTS_ED25519_PRIVATE" | "VSARENA_RESULTS_ED25519_PUBLIC",
 ): string {
   if (env) return env[name] ?? "";
@@ -238,7 +241,7 @@ export function exportPublicKeyPem(key: KeyObject): string {
  *
  * @example resultsEd25519Private()
  */
-export function resultsEd25519Private(env?: NodeJS.ProcessEnv): KeyObject | null {
+export function resultsEd25519Private(env?: EvalKeyEnv): KeyObject | null {
   return parseEd25519Private(pemFromEnv(env, "VSARENA_RESULTS_ED25519_PRIVATE"));
 }
 
@@ -247,7 +250,7 @@ export function resultsEd25519Private(env?: NodeJS.ProcessEnv): KeyObject | null
  *
  * @example resultsEd25519Public()
  */
-export function resultsEd25519Public(env?: NodeJS.ProcessEnv): KeyObject | null {
+export function resultsEd25519Public(env?: EvalKeyEnv): KeyObject | null {
   const fromPublic = parseEd25519Public(pemFromEnv(env, "VSARENA_RESULTS_ED25519_PUBLIC"));
   if (fromPublic) return fromPublic;
   const priv = resultsEd25519Private(env);
@@ -255,7 +258,7 @@ export function resultsEd25519Public(env?: NodeJS.ProcessEnv): KeyObject | null 
   return createPublicKey(priv);
 }
 
-export function resultsEd25519PublicPem(env?: NodeJS.ProcessEnv): string | null {
+export function resultsEd25519PublicPem(env?: EvalKeyEnv): string | null {
   const key = resultsEd25519Public(env);
   return key ? exportPublicKeyPem(key) : null;
 }

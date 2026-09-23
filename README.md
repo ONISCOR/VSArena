@@ -1,6 +1,6 @@
 
 
-![VSArena](public/brand/vs-arena-icon.png)
+<img src="public/brand/vs-arena-icon.png" alt="VSArena" width="56" />
 
 # VSArena
 

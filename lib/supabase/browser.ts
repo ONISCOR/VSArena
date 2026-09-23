@@ -5,8 +5,6 @@ import { isSupabaseConfigured, supabaseAnonKey, supabaseUrl } from "@/lib/supaba
 
 /**
  * Browser Supabase client (anon + user session cookies).
- *
- * @example const supabase = createBrowserSupabase()
  */
 export function createBrowserSupabase() {
   if (!isSupabaseConfigured()) {

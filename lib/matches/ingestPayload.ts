@@ -10,6 +10,7 @@ import {
   verifyManifestDsse,
 } from "@/lib/eval/receipt";
 import type { EvalProvenance } from "@/lib/eval/provenance";
+import { hydrateReplayArtifact, parseStoredReplayTrail } from "@/lib/eval/replay";
 import { packOfficialTelemetry } from "@/lib/eval/storedEval";
 import type { FailureRecord } from "@/lib/eval/taxonomy";
 import type { StoredMatch } from "@/lib/matches/memory";
@@ -18,7 +19,10 @@ import type { KeyObject } from "node:crypto";
 export type IngestReject = { ok: false; status: 400 | 403; error: string };
 export type IngestAccept = {
   ok: true;
-  entry: Omit<StoredMatch, "elo_delta" | "agent_slug" | "stored_at"> & { agent: string };
+  entry: Omit<StoredMatch, "elo_delta" | "agent_slug" | "stored_at"> & {
+    agent: string;
+    owner_id: string;
+  };
 };
 
 export interface IngestVerify {
@@ -33,11 +37,11 @@ function asFinite(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-/**
- * Parse + verify digest (integrity) and Ed25519 DSSE (identity). HMAC-only bodies are rejected.
- *
- * @example parseOfficialIngest(body, { publicKey: resultsEd25519Public() })
- */
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+/** Parse + verify digest and Ed25519 DSSE. Replay is optional and unsigned. */
 export function parseOfficialIngest(body: unknown, options: IngestVerify = {}): IngestReject | IngestAccept {
   const row = asRecord(body);
   if (!row) return { ok: false, status: 400, error: "invalid result payload" };
@@ -50,6 +54,10 @@ export function parseOfficialIngest(body: unknown, options: IngestVerify = {}): 
   if (typeof row.agent !== "string" || !row.agent.trim()) {
     return { ok: false, status: 400, error: "invalid result payload" };
   }
+  if (typeof row.owner_id !== "string" || !isUuid(row.owner_id)) {
+    return { ok: false, status: 400, error: "result missing owner_id" };
+  }
+  const ownerId = row.owner_id;
   const scores = asRecord(row.scores);
   const torque = asRecord(scores?.joint_torque_telemetry);
   const spatial = asFinite(scores?.spatial_accuracy);
@@ -69,15 +77,18 @@ export function parseOfficialIngest(body: unknown, options: IngestVerify = {}): 
     return { ok: false, status: 400, error: "result missing sampler_seed, failure, or provenance" };
   }
 
+  const replayTrail = row.replay == null ? null : parseStoredReplayTrail(row.replay);
+  const scoreBlock = {
+    spatial_accuracy: spatial,
+    task_completion_score: completion,
+    joint_torque_telemetry: { peak, avg },
+  };
+
   const manifest: RunManifest = buildRunManifest({
     match_id: row.match_id,
     agent: row.agent.trim(),
     status: row.status,
-    scores: {
-      spatial_accuracy: spatial,
-      task_completion_score: completion,
-      joint_torque_telemetry: { peak, avg },
-    },
+    scores: scoreBlock,
     sampler_seed: samplerSeed >>> 0,
     failure,
     provenance,
@@ -102,6 +113,9 @@ export function parseOfficialIngest(body: unknown, options: IngestVerify = {}): 
   if (!verifyManifestDsse(manifest, signature, publicKey)) {
     return { ok: false, status: 403, error: "invalid result signature" };
   }
+  if (provenance.observation_mode && provenance.observation_mode !== "vla") {
+    return { ok: false, status: 400, error: "only the VLA observation track may write public ELO" };
+  }
 
   return {
     ok: true,
@@ -119,17 +133,29 @@ export function parseOfficialIngest(body: unknown, options: IngestVerify = {}): 
           provenance,
           samplerSeed: samplerSeed >>> 0,
           control,
+          replay: replayTrail,
           digest,
           signature,
           alg: RECEIPT_ALG,
         }),
       },
       agent: row.agent.trim(),
+      owner_id: ownerId,
       failure,
       provenance,
       control: control ?? undefined,
       digest,
       signature,
+      replay: replayTrail
+        ? hydrateReplayArtifact(replayTrail, {
+            matchId: row.match_id,
+            agent: row.agent.trim(),
+            provenance,
+            failure,
+            scores: scoreBlock,
+            status: row.status,
+          })
+        : undefined,
     },
   };
 }

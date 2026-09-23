@@ -28,8 +28,6 @@ function hexRgb(hex: string): [number, number, number] {
 
 /**
  * Project table XZ into pixel coordinates of the VLA raster.
- *
- * @example vlaWorldToPixel(0.48, 0.22, 128)
  */
 export function vlaWorldToPixel(x: number, z: number, size: number): [number, number] {
   const u = ((x - VLA_X_MIN) / (VLA_X_MAX - VLA_X_MIN)) * (size - 1);
@@ -62,8 +60,6 @@ function fillRect(
 
 /**
  * Paint a top-down RGB frame of the table, cubes, and TCP. No privileged numbers in the pixels themselves.
- *
- * @example rasterScene(snapshot)[0] // red of pixel 0
  */
 export function rasterScene(snapshot: SimulationSnapshot, size: number = VLA_IMAGE_SIZE): Uint8Array {
   const rgb = new Uint8Array(size * size * 3);
@@ -92,8 +88,6 @@ export function rasterScene(snapshot: SimulationSnapshot, size: number = VLA_IMA
 
 /**
  * Row-major RGB8 → standard base64 (no data: URL prefix).
- *
- * @example encodeRgb8(rasterScene(snap)).slice(0, 8)
  */
 export function encodeRgb8(rgb: Uint8Array): string {
   if (typeof Buffer !== "undefined") {

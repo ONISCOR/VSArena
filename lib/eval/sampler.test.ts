@@ -34,13 +34,13 @@ describe("eval window sampler", () => {
       matchId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       samplerSeed: seed,
       arm: "scored",
-      env: { VSARENA_SCENE_SET: "held_out" },
+      env: { VSARENA_SCENE_SET: "held_out", VSARENA_ALLOW_INREPO_HELD_OUT: "1" },
     });
     const bea = resolveScene({
       matchId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       samplerSeed: seed,
       arm: "scored",
-      env: { VSARENA_SCENE_SET: "held_out" },
+      env: { VSARENA_SCENE_SET: "held_out", VSARENA_ALLOW_INREPO_HELD_OUT: "1" },
     });
     expect(ada.hash).toBe(bea.hash);
     expect(ada.spawns).toEqual(bea.spawns);

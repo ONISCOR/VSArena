@@ -10,8 +10,6 @@ interface OniscorMarkProps {
 
 /**
  * ONISCOR lab mark (icon + wordmark on black). Used as Aran Kair’s avatar.
- *
- * @example <OniscorMark className="h-16 w-16" />
  */
 export function OniscorMark({
   className,

@@ -4,8 +4,6 @@ import { isSupabaseConfigured, supabaseAnonKey, supabaseUrl } from "@/lib/supaba
 
 /**
  * Server Supabase client bound to the incoming request cookies.
- *
- * @example const supabase = createServerSupabase()
  */
 export function createServerSupabase() {
   if (!isSupabaseConfigured()) {

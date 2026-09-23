@@ -18,8 +18,6 @@ export interface BadgeStats {
 
 /**
  * Harness-only badges. Studio demos never increment these stats.
- *
- * @example computeBadges({ slug: "ada", matches: 4, weekMatches: 3, elo: 1210, houseElo: 1200, stacked: true })
  */
 export function computeBadges(stats: BadgeStats): BadgeId[] {
   const out: BadgeId[] = [];
@@ -42,8 +40,6 @@ export interface FilterableAgent {
 
 /**
  * Subset the board. Rank stays the global ELO rank.
- *
- * @example filterBoard(rows, "week")
  */
 export function filterBoard<T extends FilterableAgent>(rows: T[], filter: BoardFilter, now = Date.now()): T[] {
   if (filter === "all") return rows;

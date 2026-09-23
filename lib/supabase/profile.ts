@@ -6,8 +6,6 @@ export { githubUsername } from "@/lib/auth/identity";
 
 /**
  * Insert a profiles row for a newly signed-in user (idempotent).
- *
- * @example await ensureProfile(user)
  */
 export async function ensureProfile(user: User): Promise<void> {
   const admin = createAdminSupabase();

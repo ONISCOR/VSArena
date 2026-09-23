@@ -78,8 +78,6 @@ const HELD_OUT_XZ: Array<[[number, number], [number, number], [number, number]]>
 
 /**
  * Integer hash of a uuid / string → uint32.
- *
- * @example seedFromId("m1")
  */
 export function seedFromId(id: string): number {
   let h = 2166136261;
@@ -158,8 +156,6 @@ function parsePrivateJson(raw: string): BlockSpawn[] | null {
  * Official vs Studio scene. Production harness defaults to held_out.
  * Pass `samplerSeed` (eval-window) so every agent in the same week shares layouts.
  * `arm: "control"` is always the public canonical layout (no jitter).
- *
- * @example resolveScene({ matchId: "uuid", samplerSeed, arm: "scored" })
  */
 export function resolveScene(options: {
   matchId: string;
@@ -212,6 +208,16 @@ export function resolveScene(options: {
       spawns: privateSpawns,
       private_override: true,
     };
+  }
+
+  // Production official ELO must not rely on in-repo layouts (open source = memorisable).
+  // Unit tests / local staging may set VSARENA_ALLOW_INREPO_HELD_OUT=1.
+  const allowInRepo =
+    (env.VSARENA_ALLOW_INREPO_HELD_OUT ?? "").trim() === "1" || env.NODE_ENV !== "production";
+  if (!allowInRepo) {
+    throw new Error(
+      "VSARENA_HELD_OUT_JSON is required in production for held_out scenes (set VSARENA_ALLOW_INREPO_HELD_OUT=1 only for local/staging)",
+    );
   }
 
   const { index, spawns } = heldOutSpawns(seed);

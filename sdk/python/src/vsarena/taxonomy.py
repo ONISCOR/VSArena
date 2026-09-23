@@ -18,7 +18,12 @@ FAILURE_CODES = (
     "protocol.invalid_task",
     "protocol.invalid_action",
     "protocol.schema_violation",
+    "protocol.agent_unregistered",
+    "protocol.agent_forbidden",
+    "protocol.rate_limited",
+    "protocol.state_mode_not_scored",
     "harness.busy",
+    "harness.queued",
     "harness.misconfigured",
     "harness.disconnect",
 )

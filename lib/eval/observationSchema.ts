@@ -18,8 +18,6 @@ function finiteNumber(value: unknown): value is number {
 
 /**
  * Check a `state` message against the published observation contract.
- *
- * @example parseStateContract(snapshotToState(snap, "m", 1, { mode: "vla" }))
  */
 export function parseStateContract(value: unknown): StateContractOk | StateContractBad {
   if (!value || typeof value !== "object") {

@@ -18,8 +18,6 @@ interface Row extends ArenaAgent {
 
 /**
  * Sortable public table. Filters subset rows; rank stays global ELO rank.
- *
- * @example <LeaderboardTable rows={rows} />
  */
 export function LeaderboardTable({ rows }: { rows: Row[] }) {
   const { m } = useI18n();

@@ -31,8 +31,6 @@ interface DemoState {
 
 /**
  * Teleop / agent VLA demo session. ArenaScene is the only writer of `bumpFrame`.
- *
- * @example useDemoStore.getState().startRecording()
  */
 export const useDemoStore = create<DemoState>((set, get) => ({
   recording: false,

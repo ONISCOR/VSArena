@@ -6,8 +6,6 @@ const FOUNDER_ALIASES = new Set([FOUNDER_HANDLE, "novacoding-g"]);
 
 /**
  * GitHub handle from Auth metadata, with a stable fallback.
- *
- * @example githubUsername(user) // "arankair"
  */
 export function githubUsername(user: User): string {
   return handleFromMeta(user.user_metadata ?? {}, user.email);
@@ -15,8 +13,6 @@ export function githubUsername(user: User): string {
 
 /**
  * Public name for the header and the account desk.
- *
- * @example githubDisplayName(user) // "Aran Kair"
  */
 export function githubDisplayName(user: User): string {
   return displayNameFromMeta(user.user_metadata ?? {}, githubUsername(user));
@@ -24,8 +20,6 @@ export function githubDisplayName(user: User): string {
 
 /**
  * Handle from raw Auth metadata (safe in the browser).
- *
- * @example handleFromMeta({ user_name: "arankair" }) // "arankair"
  */
 export function handleFromMeta(meta: Record<string, unknown>, email?: string | null): string {
   const raw = meta.user_name ?? meta.preferred_username ?? meta.login ?? email?.split("@")[0];
@@ -38,8 +32,6 @@ export function handleFromMeta(meta: Record<string, unknown>, email?: string | n
 
 /**
  * Spoken name. Founder handle maps to Aran Kair when GitHub has no full name.
- *
- * @example displayNameFromMeta({ full_name: "Aran Kair" }, "arankair")
  */
 export function displayNameFromMeta(meta: Record<string, unknown>, handle: string): string {
   const full = String(meta.full_name ?? meta.name ?? "").trim();

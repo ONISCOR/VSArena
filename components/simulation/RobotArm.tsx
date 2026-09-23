@@ -173,7 +173,7 @@ function Tool() {
 }
 
 function PandaWhite() {
-  return <meshPhysicalMaterial color={WHITE} metalness={0.04} roughness={0.44} clearcoat={0.28} clearcoatRoughness={0.4} />;
+  return <meshPhysicalMaterial color={WHITE} metalness={0.05} roughness={0.38} clearcoat={0.42} clearcoatRoughness={0.28} envMapIntensity={1.05} />;
 }
 
 function PandaBlack() {
@@ -181,7 +181,7 @@ function PandaBlack() {
 }
 
 function PandaMetal() {
-  return <meshPhysicalMaterial color={METAL} metalness={0.86} roughness={0.26} />;
+  return <meshPhysicalMaterial color={METAL} metalness={0.9} roughness={0.2} envMapIntensity={1.2} />;
 }
 
 function PandaGraphite() {

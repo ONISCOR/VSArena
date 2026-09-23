@@ -4,6 +4,7 @@ import type { ControlArm } from "@/lib/eval/control";
 import { HMAC_ALG, MANIFEST_VERSION, type RunManifest } from "@/lib/eval/manifest";
 import { DIGEST_ALG, RECEIPT_ALG, type ReceiptAlg } from "@/lib/eval/receipt";
 import type { EvalProvenance } from "@/lib/eval/provenance";
+import { parseStoredReplayTrail, type StoredReplayTrail } from "@/lib/eval/replay";
 import type { FailureRecord } from "@/lib/eval/taxonomy";
 
 export interface OfficialEvalBlob {
@@ -11,6 +12,7 @@ export interface OfficialEvalBlob {
   provenance: EvalProvenance;
   sampler_seed: number;
   control: ControlArm | null;
+  replay?: StoredReplayTrail;
   digest?: string;
   digest_alg?: typeof DIGEST_ALG;
   signature: string;
@@ -23,11 +25,6 @@ export interface TorqueTelemetry {
   eval?: OfficialEvalBlob;
 }
 
-/**
- * Pack scores + integrity fields into the existing jsonb column.
- *
- * @example packOfficialTelemetry({ peak: 1, avg: 0.2, ... })
- */
 export function packOfficialTelemetry(input: {
   peak: number;
   avg: number;
@@ -35,6 +32,7 @@ export function packOfficialTelemetry(input: {
   provenance: EvalProvenance;
   samplerSeed: number;
   control: ControlArm | null;
+  replay?: StoredReplayTrail | null;
   digest?: string;
   signature: string;
   alg?: ReceiptAlg;
@@ -48,6 +46,7 @@ export function packOfficialTelemetry(input: {
       provenance: input.provenance,
       sampler_seed: input.samplerSeed,
       control: input.control,
+      ...(input.replay ? { replay: input.replay } : {}),
       ...(input.digest
         ? { digest: input.digest, digest_alg: DIGEST_ALG }
         : {}),
@@ -109,9 +108,62 @@ function asProvenance(value: unknown): EvalProvenance | null {
   const scene = asRecord(row.scene);
   const counters = asRecord(row.counters);
   const sampler = asFiniteNumber(row.sampler_seed);
-  if (!scene || !counters || sampler === null) return null;
+  const physics = asFiniteNumber(row.physics_hz);
+  const latency = asFiniteNumber(row.latency_budget_ms);
+  const hz = asFiniteNumber(row.policy_hz);
+  if (!scene || !counters || sampler === null || physics === null || latency === null || hz === null) {
+    return null;
+  }
   if (typeof row.product !== "string" || typeof row.git_sha !== "string") return null;
-  return row as unknown as EvalProvenance;
+  if (typeof row.rapier !== "string" || typeof row.node !== "string") return null;
+  if (row.observation_mode !== "vla" && row.observation_mode !== "state") return null;
+  if (typeof scene.set !== "string" || typeof scene.id !== "string") return null;
+  const sceneSeed = asFiniteNumber(scene.seed);
+  if (sceneSeed === null || typeof scene.hash !== "string") return null;
+  if (scene.arm !== "scored" && scene.arm !== "control") return null;
+  const invalid = asFiniteNumber(counters.invalid_actions);
+  const timeouts = asFiniteNumber(counters.consecutive_timeouts);
+  const actionTimeouts = asFiniteNumber(counters.action_timeouts);
+  if (invalid === null || timeouts === null || actionTimeouts === null) return null;
+
+  const started = asFiniteNumber(row.started_at_ms);
+  const ended = asFiniteNumber(row.ended_at_ms);
+  const duration = asFiniteNumber(row.duration_ms);
+
+  return {
+    product: row.product,
+    rapier: row.rapier,
+    physics_hz: physics,
+    git_sha: row.git_sha,
+    node: row.node,
+    task_id: typeof row.task_id === "string" ? row.task_id : "block_stacking",
+    task_version: typeof row.task_version === "string" ? row.task_version : "block_stacking.v1",
+    observation_schema_version:
+      typeof row.observation_schema_version === "string" ? row.observation_schema_version : "obs.v1",
+    action_schema_version:
+      typeof row.action_schema_version === "string" ? row.action_schema_version : "action.v1",
+    observation_mode: row.observation_mode,
+    latency_budget_ms: latency,
+    policy_hz: hz,
+    sampler_seed: sampler,
+    ...(typeof row.eval_window === "string" ? { eval_window: row.eval_window } : {}),
+    ...(started !== null ? { started_at_ms: started } : {}),
+    ...(ended !== null ? { ended_at_ms: ended } : {}),
+    ...(duration !== null ? { duration_ms: duration } : {}),
+    scene: {
+      set: scene.set,
+      id: scene.id,
+      seed: sceneSeed,
+      hash: scene.hash,
+      private_override: scene.private_override === true,
+      arm: scene.arm,
+    },
+    counters: {
+      action_timeouts: actionTimeouts,
+      invalid_actions: invalid,
+      consecutive_timeouts: timeouts,
+    },
+  };
 }
 
 function asAlg(value: unknown, digest: string | undefined): ReceiptAlg {
@@ -119,11 +171,6 @@ function asAlg(value: unknown, digest: string | undefined): ReceiptAlg {
   return digest ? RECEIPT_ALG : HMAC_ALG;
 }
 
-/**
- * Pull peak/avg plus an official eval blob if present.
- *
- * @example parseTorqueTelemetry(row.joint_torque_telemetry)
- */
 export function parseTorqueTelemetry(raw: unknown): TorqueTelemetry {
   const row = asRecord(raw) ?? {};
   const peak = asFiniteNumber(row.peak) ?? 0;
@@ -139,6 +186,7 @@ export function parseTorqueTelemetry(raw: unknown): TorqueTelemetry {
     return { peak, avg };
   }
   const alg = asAlg(blob.alg, digest);
+  const replay = parseStoredReplayTrail(blob.replay);
   return {
     peak,
     avg,
@@ -147,6 +195,7 @@ export function parseTorqueTelemetry(raw: unknown): TorqueTelemetry {
       provenance,
       sampler_seed: sampler,
       control: asControl(blob.control),
+      ...(replay ? { replay } : {}),
       digest,
       digest_alg: digest ? DIGEST_ALG : undefined,
       signature,
@@ -155,11 +204,6 @@ export function parseTorqueTelemetry(raw: unknown): TorqueTelemetry {
   };
 }
 
-/**
- * Rebuild the signed manifest from a stored match row.
- *
- * @example manifestFromStored({ matchId, agent, status, scores, eval: blob })
- */
 export function manifestFromStored(input: {
   matchId: string;
   agent: string;

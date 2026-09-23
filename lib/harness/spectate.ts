@@ -13,7 +13,7 @@ export interface SpectateBlock {
   color: string;
 }
 
-export type SpectateKind = "control" | "highlight";
+export type SpectateKind = "control" | "scored" | "highlight";
 
 export interface SpectateFrameMessage {
   type: "spectate_frame";
@@ -22,7 +22,7 @@ export interface SpectateFrameMessage {
   timestamp_ms: number;
   agent: string;
   mode: ObservationMode;
-  /** control = public table of a live match; highlight = retired week's best run. */
+  /** control = public control arm; scored = public scored arm (dev); highlight = retired week. */
   kind?: SpectateKind;
   eval_window?: string;
   joints: JointState;
@@ -64,17 +64,20 @@ export type SpectateMessage =
 
 /**
  * Live spectator may show the public control table, never the current held-out scored layout.
- *
- * @example shouldBroadcastSpectate("scored", "held_out") // false
  */
 export function shouldBroadcastSpectate(arm: "control" | "scored", sceneSet: "public" | "held_out"): boolean {
   return arm === "control" || sceneSet === "public";
 }
 
 /**
+ * Wire label for a live spectate stream.
+ */
+export function spectateKindForArm(arm: "control" | "scored"): Exclude<SpectateKind, "highlight"> {
+  return arm === "control" ? "control" : "scored";
+}
+
+/**
  * Privileged snapshot → spectator wire frame (poses for Three.js, never agent actions).
- *
- * @example snapshotToSpectateFrame(snap, matchId, "ColorSeek", "vla")
  */
 export function snapshotToSpectateFrame(
   snapshot: SimulationSnapshot,

@@ -13,8 +13,6 @@ const VARIANT: Record<BadgeId, "cyan" | "orange" | "muted"> = {
 
 /**
  * Harness-earned badges. Hidden when the agent has none.
- *
- * @example <AgentBadges ids={agent.badges} />
  */
 export function AgentBadges({ ids }: { ids: BadgeId[] }) {
   const { m } = useI18n();

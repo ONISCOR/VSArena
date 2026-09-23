@@ -8,9 +8,7 @@ import { useI18n } from "@/components/i18n/LocaleProvider";
 type SoonSection = "arena" | "community" | "events";
 
 /**
- * Locked-section screen. Studio v0.6.0 stays the live work-cell.
- *
- * @example <ComingSoon section="arena" />
+ * Locked-section screen. Studio V1 stays the live work-cell.
  */
 export function ComingSoon({ section }: { section: SoonSection }) {
   const { m } = useI18n();

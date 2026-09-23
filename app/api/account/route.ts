@@ -21,8 +21,6 @@ async function loadProfile(userId: string) {
 
 /**
  * Own profile + API key + agents.
- *
- * @example GET /api/account
  */
 export async function GET() {
   const user = await getSessionUser();
@@ -56,8 +54,6 @@ export async function GET() {
 
 /**
  * Rotate the API key. Previous key stops working immediately.
- *
- * @example POST /api/account  { "action": "rotate" }
  */
 export async function POST(request: Request) {
   const user = await getSessionUser();

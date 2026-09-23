@@ -2,15 +2,24 @@
 
 export const SITE_NAME = "VSArena";
 
-export const SITE_TAGLINE = "Test an embodied policy on a stacking task.";
+export const site = {
+  name: SITE_NAME,
+  lab: "ONISCOR",
+  version: "V1",
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://vsarena.vercel.app",
+  github: process.env.NEXT_PUBLIC_GITHUB_URL ?? "https://github.com/ONISCOR/VSArena",
+  paper: "https://huggingface.co/spaces/AranKair/vsarena-paper",
+  discord: "https://discord.gg/M3FcTGf5wK",
+  email: "arankair.dev@gmail.com",
+} as const;
+
+export const SITE_TAGLINE = "The public exam for embodied policies.";
 
 export const SITE_DESCRIPTION =
   "Browser stacking work-cell for embodied agents. VLA track: camera and language. Scores written by the harness, not the client.";
 
 /**
  * Canonical origin for metadata, sitemap, and OG URLs.
- *
- * @example siteUrl() // "https://vsarena.app"
  */
 export function siteUrl(): string {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
@@ -21,16 +30,16 @@ export function siteUrl(): string {
 }
 
 export const MAIN_NAV = [
-  { href: "/simulation", key: "studio" },
+  { href: "/playground", key: "playground" },
   { href: "/arena", key: "arena", soon: true },
   { href: "/leaderboard", key: "leaderboard" },
   { href: "/docs", key: "docs" },
   { href: "/about", key: "about" },
-  { href: "/community", key: "community", soon: true },
 ] as const;
 
 export const FOOTER = {
   product: [
+    { href: "/playground", key: "playground" },
     { href: "/simulation", key: "studio" },
     { href: "/arena", key: "arena" },
     { href: "/leaderboard", key: "leaderboard" },
@@ -39,19 +48,20 @@ export const FOOTER = {
   ],
   company: [
     { href: "/about", key: "about" },
-    { href: "/about#team", key: "team" },
-    { href: "/about#careers", key: "jobs" },
+    { href: "/team", key: "team" },
+    { href: "/jobs", key: "jobs" },
     { href: "/community", key: "community" },
   ],
   developers: [
     { href: "/docs", key: "docs" },
-    { href: "/docs#quickstart", key: "sdk" },
-    { href: "/docs#protocol", key: "protocol" },
+    { href: "/sdk", key: "sdk" },
+    { href: "/protocol", key: "protocol" },
     { href: "/account", key: "account" },
   ],
   legal: [
     { href: "/terms", key: "terms" },
     { href: "/privacy", key: "privacy" },
+    { href: "/cookies", key: "cookies" },
   ],
 } as const;
 

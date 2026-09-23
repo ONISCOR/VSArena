@@ -1,12 +1,8 @@
-import { ComingSoon } from "@/components/layout/ComingSoon";
+import { SimplePage } from "@/components/pages/SimplePage";
 import { pageMetadata } from "@/lib/seo";
 
-export const metadata = pageMetadata(
-  "Events",
-  "Coming soon: cups and live broadcasts. None scheduled.",
-  "/events",
-);
+export const metadata = pageMetadata("Events", "No cups scheduled.", "/events");
 
-export default function EventsPage() {
-  return <ComingSoon section="events" />;
+export default function Page() {
+  return <SimplePage kind="events" />;
 }

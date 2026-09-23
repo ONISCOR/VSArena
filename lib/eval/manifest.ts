@@ -27,8 +27,6 @@ export interface RunManifest {
 
 /**
  * Signing secret. Dedicated key if set, otherwise the ingest secret.
- *
- * @example resultsSigningSecret()
  */
 export function resultsSigningSecret(env: NodeJS.ProcessEnv = process.env): string {
   const dedicated = (env.VSARENA_RESULTS_SIGNING_KEY ?? "").trim();
@@ -38,8 +36,6 @@ export function resultsSigningSecret(env: NodeJS.ProcessEnv = process.env): stri
 
 /**
  * Stable JSON for signatures. Sorted keys, drop undefined, arrays keep order.
- *
- * @example stableStringify({ b: 1, a: 2 })
  */
 export function stableStringify(value: unknown): string {
   return JSON.stringify(sortValue(value));
@@ -60,8 +56,6 @@ function sortValue(value: unknown): unknown {
 
 /**
  * Build the signed payload. elo_delta and replay are excluded on purpose.
- *
- * @example buildRunManifest({ match_id: "m", ... })
  */
 export function buildRunManifest(input: Omit<RunManifest, "v">): RunManifest {
   return {
@@ -86,8 +80,6 @@ export function buildRunManifest(input: Omit<RunManifest, "v">): RunManifest {
 
 /**
  * Hex HMAC-SHA256 of the canonical manifest.
- *
- * @example signRunManifest(manifest, secret)
  */
 export function signRunManifest(manifest: RunManifest, secret: string): string {
   return createHmac("sha256", secret).update(stableStringify(manifest), "utf8").digest("hex");
@@ -95,8 +87,6 @@ export function signRunManifest(manifest: RunManifest, secret: string): string {
 
 /**
  * Constant-time signature check.
- *
- * @example verifyRunManifest(manifest, sig, secret)
  */
 export function verifyRunManifest(manifest: RunManifest, signature: string, secret: string): boolean {
   if (secret.length < 16) return false;

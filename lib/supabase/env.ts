@@ -15,8 +15,6 @@ export function supabaseServiceRoleKey(): string {
 
 /**
  * True when browser/server anon client can be constructed.
- *
- * @example if (isSupabaseConfigured()) createBrowserClient()
  */
 export function isSupabaseConfigured(): boolean {
   const url = supabaseUrl();
@@ -26,8 +24,6 @@ export function isSupabaseConfigured(): boolean {
 
 /**
  * True when match writes can use the service role (bypasses RLS).
- *
- * @example if (hasServiceRole()) recordMatchPostgres()
  */
 export function hasServiceRole(): boolean {
   return isSupabaseConfigured() && supabaseServiceRoleKey().length > 40;

@@ -1,14 +1,27 @@
-/** Copy for /docs. Mirrors docs/sdk.md and docs/harness.md without inventing APIs. */
+/** Snippets for /docs, /submit, and /account. Keep in sync with docs/sdk.md. */
 
-export const DOC_NAV = [
-  { id: "overview", label: "What it is" },
-  { id: "quickstart", label: "Quickstart" },
-  { id: "tracks", label: "VLA vs state" },
-  { id: "elo", label: "How ELO is written" },
-  { id: "protocol", label: "Protocol" },
-  { id: "demos", label: "Demos" },
-  { id: "fail", label: "If it fails" },
-] as const;
+export const QUICKSTART_LIVE_RUN = `import os
+from vsarena import Agent, run_match
+
+class MyAgent(Agent):
+    def act(self, state: dict) -> dict:
+        joints = state["scene"]["joint_states"]
+        _ = state["instruction"]
+        _ = state["images"]["scene"]
+        return {"joint_targets": dict(joints), "gripper_state": "open"}
+
+run_match(
+    MyAgent(),
+    dry_run=False,
+    mode="vla",
+    api_key=os.environ["VSARENA_API_KEY"],
+    agent_name=os.environ.get("VSARENA_AGENT_NAME", "MyAgent"),
+)`;
+
+export const QUICKSTART_LIVE_CLI = `# after: pip install -e "sdk/python[live]"
+# export VSARENA_API_KEY=…   # from /account
+# export VSARENA_HARNESS_URL=wss://vsarena-harness.onrender.com
+python -m vsarena --live --task block_stacking`;
 
 export const QUICKSTART_INSTALL = `pip install -e sdk/python
 python -m vsarena
@@ -43,20 +56,6 @@ class MyAgent(Agent):
         # or: return {"ee_delta": {"dx": 0.01, "dy": 0.0, "dz": 0.0}, "gripper_state": "open"}
 
 print(run_match(MyAgent(), dry_run=True, mode="vla"))`;
-
-export const QUICKSTART_LIVE = `from vsarena import ColorSeek, run_match
-
-run_match(ColorSeek(), dry_run=True, mode="vla")
-# live (needs npm run harness + API key):
-# run_match(ColorSeek(), dry_run=False, mode="vla", api_key="…", agent_name="ColorSeek")`;
-
-export const QUICKSTART_LIVE_RUN = `from vsarena import ColorSeek, run_match
-
-run_match(ColorSeek(), dry_run=False, mode="vla", api_key="…", agent_name="ColorSeek")`;
-
-export const QUICKSTART_PRACTICE = `from vsarena import ColorSeek, run_match
-
-print(run_match(ColorSeek(), dry_run=True, mode="vla"))`;
 
 export const QUICKSTART_REPLAY = `from vsarena import ReplayAgent, load_episode, run_match
 
@@ -116,7 +115,7 @@ export const PROTOCOL_RESULT = `{
     "message": "policy.task_complete: stack slots filled",
     "recoverable": false
   },
-  "provenance": { "product": "0.6.0", "rapier": "0.20.0", "physics_hz": 60, "git_sha": "…", "sampler_seed": 123456789, "eval_window": "2026-W37" },
+  "provenance": { "product": "1.0.0", "rapier": "0.20.0", "physics_hz": 60, "git_sha": "…", "sampler_seed": 123456789, "eval_window": "2026-W38" },
   "control": { "arm": "control", "task_completion_score": 0, "degenerate": false },
   "digest": "hex sha256",
   "signature": "base64 ed25519-dsse"

@@ -4,11 +4,11 @@ import type { LegalDocument } from "@/lib/legal/types";
 const it: LegalDocument = {
   kicker: "Termini",
   title: "Termini e condizioni di utilizzo",
-  updatedLine: "Ultimo aggiornamento: 1 settembre 2026. Versione 1.1.",
+  updatedLine: "Ultimo aggiornamento: {updatedIt}. VSArena V1.",
   intro: [
     "Questi termini regolano l’uso del sito VSArena, dello Studio, dell’SDK, dell’harness e della classifica (insieme, il «Servizio»). Usando il Servizio dichiari di averli letti e di accettarli.",
-    "Il prestatore è {controller}, persona fisica (il «Prestatore»), founder del laboratorio indipendente {org}. VSArena non è una società costituita: è un progetto open source pubblicato sotto l’organizzazione GitHub {org}. Non c’è partita IVA di società, né iscrizione al registro delle imprese riferita a VSArena o a {org}. Contatti: {email} — repository {github}.",
-    "Il Servizio è un MVP gratuito per ricerca, studio e confronto di agenti. Non è un sistema di controllo di robot reali e non offre SLA. Se il progetto diventerà una società, questi termini saranno aggiornati.",
+    "Il prestatore è {controller}, persona fisica identificata con questo pseudonimo (il «Prestatore»), founder del laboratorio indipendente {org}. VSArena non è una società costituita: è un progetto open source V1 pubblicato sotto l’organizzazione GitHub {org}. Non c’è partita IVA di società, né iscrizione al registro delle imprese riferita a VSArena o a {org}. Contatti: {email} — repository {github}.",
+    "Il Servizio è gratuito. Comprende il sito, il Playground pubblico, Studio, l’SDK, l’harness quando è configurato, e la classifica. Non è un sistema di controllo di robot reali e non offre SLA. Se il progetto diventerà una società, questi termini saranno aggiornati.",
   ],
   sections: [
     {
@@ -20,6 +20,7 @@ const it: LegalDocument = {
             "Account: profilo creato con login GitHub.",
             "Agente: programma o policy che invii o registri per una prova.",
             "Studio: simulazione nel browser (un agente, stacking).",
+            "Playground: cella pubblica nello stesso tab; demo e script canned, senza ELO.",
             "Arena: prova 1 contro 1, non ancora disponibile.",
             "Classifica: tabella pubblica di nomi, URL, punteggi ed ELO.",
             "Harness: processo che esegue un match live e può scrivere l’ELO ufficiale.",
@@ -84,7 +85,7 @@ const it: LegalDocument = {
             "tentare di falsificare punteggi, eludere l’harness, saturare o attaccare l’infrastruttura;",
             "inviare malware, tentare accessi non autorizzati, o usare il Servizio per reati;",
             "caricare contenuti illeciti, diffamatori, o che violino diritti di terzi;",
-            "spacciare demo dello Studio per ELO ufficiale;",
+            "spacciare demo dello Studio o script del Playground per ELO ufficiale;",
             "presentare ColorSeek o Baseline-IK come reti VLA se non lo sono;",
             "rivendere l’accesso al Servizio senza accordo scritto.",
           ],
@@ -100,7 +101,7 @@ const it: LegalDocument = {
       ],
     },
     {
-      title: "8. Disponibilità, modifiche, MVP",
+      title: "8. Disponibilità e modifiche",
       blocks: [
         {
           p: "Il Servizio è offerto «nello stato in cui si trova». Possiamo interromperlo, cambiarlo, resettare ambienti di prova o migrare l’infrastruttura. Non garantiamo uptime, determinismo bit-a-bit rispetto a Isaac Sim o ad altri simulatori, né che un punteggio resti immutato dopo un aggiornamento della fisica o del protocollo. Di cambiamenti sostanziali al protocollo pubblico daremo notizia in documentazione.",
@@ -195,11 +196,11 @@ const it: LegalDocument = {
 const en: LegalDocument = {
   kicker: "Terms",
   title: "Terms of use",
-  updatedLine: "Last updated: 1 September 2026. Version 1.1.",
+  updatedLine: "Last updated: {updatedEn}. VSArena V1.",
   intro: [
     "These terms govern use of the VSArena site, Studio, SDK, harness and leaderboard (the “Service”). By using the Service you confirm you have read and accept them.",
-    "The provider is {controller}, a natural person (the “Provider”) and founder of the independent lab {org}. VSArena is not an incorporated company: it is an open-source project published under the {org} GitHub organization. There is no company VAT number and no companies-register filing for VSArena or {org}. Contact: {email} — repository {github}.",
-    "The Service is a free research MVP. It is not a real-robot controller and it has no SLA. If the project later becomes a company, these terms will be updated.",
+    "The provider is {controller}, a natural person identified by this pseudonym (the “Provider”) and founder of the independent lab {org}. VSArena is not an incorporated company: it is a V1 open-source project published under the {org} GitHub organization. There is no company VAT number and no companies-register filing for VSArena or {org}. Contact: {email} — repository {github}.",
+    "The Service is free. It includes the site, the public Playground, Studio, the SDK, the harness when configured, and the leaderboard. It is not a real-robot controller and it has no SLA. If the project later becomes a company, these terms will be updated.",
   ],
   sections: [
     {
@@ -211,6 +212,7 @@ const en: LegalDocument = {
             "Account: the profile created with GitHub login.",
             "Agent: a program or policy you submit or register for a task.",
             "Studio: the in-browser simulation (one agent, stacking).",
+            "Playground: the public in-tab cell; demos and canned scripts, no ELO.",
             "Arena: 1v1, not available yet.",
             "Leaderboard: the public table of names, URLs, scores and ELO.",
             "Harness: the process that runs a live match and may write official ELO.",
@@ -275,7 +277,7 @@ const en: LegalDocument = {
             "fake scores, bypass the harness, or attack the infrastructure;",
             "submit malware, attempt unauthorised access, or use the Service to commit crimes;",
             "upload unlawful, defamatory or infringing content;",
-            "present Studio demos as official ELO;",
+            "present Studio demos or Playground scripts as official ELO;",
             "present ColorSeek or Baseline-IK as neural VLAs if they are not;",
             "resell access without written agreement.",
           ],
@@ -291,7 +293,7 @@ const en: LegalDocument = {
       ],
     },
     {
-      title: "8. Availability and the MVP",
+      title: "8. Availability and changes",
       blocks: [
         {
           p: "The Service is provided as-is. We may interrupt it, change it, reset test environments or move infrastructure. We do not guarantee uptime, bit-identical physics versus Isaac Sim or other stacks, or that a score stays frozen after a physics or protocol change. Material protocol changes will be noted in the docs.",
@@ -385,8 +387,6 @@ const en: LegalDocument = {
 
 /**
  * Terms of use for the active locale.
- *
- * @example termsDocument("it")
  */
 export function termsDocument(locale: Locale): LegalDocument {
   return locale === "it" ? it : en;

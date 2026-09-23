@@ -2,15 +2,13 @@
 
 import { GITHUB_REPO, ORG_NAME } from "@/lib/content";
 
-export const LEGAL_UPDATED_ISO = "2026-09-01";
+export const LEGAL_UPDATED_ISO = "2026-09-14";
 
 const DEFAULT_CONTROLLER = "Aran Kair";
 const DEFAULT_EMAIL = "arankair.dev@gmail.com";
 
 /**
  * Public display name of the controller.
- *
- * @example legalController()
  */
 export function legalController(): string {
   const fromEnv = process.env.NEXT_PUBLIC_LEGAL_CONTROLLER?.trim();
@@ -19,8 +17,6 @@ export function legalController(): string {
 
 /**
  * Contact mailbox for privacy requests.
- *
- * @example legalEmail()
  */
 export function legalEmail(): string | null {
   const fromEnv = process.env.NEXT_PUBLIC_LEGAL_EMAIL?.trim();
@@ -47,8 +43,6 @@ export interface LegalVars {
 
 /**
  * Values interpolated into legal copy (`{controller}`, `{email}`, `{github}`, `{org}`).
- *
- * @example legalVars().controller
  */
 export function legalVars(): LegalVars {
   const email = legalEmail();
@@ -57,20 +51,20 @@ export function legalVars(): LegalVars {
     email: email ?? legalGithub(),
     github: legalGithub(),
     org: legalOrg(),
-    updatedIt: "1 settembre 2026",
-    updatedEn: "1 September 2026",
+    updatedIt: "14 settembre 2026",
+    updatedEn: "14 September 2026",
   };
 }
 
 /**
- * Replace `{controller}` / `{email}` / `{github}` / `{org}` in a legal string.
- *
- * @example fillLegal("Titolare: {controller}", legalVars())
+ * Replace `{controller}` / `{email}` / `{github}` / `{org}` / `{updatedIt}` / `{updatedEn}` in a legal string.
  */
 export function fillLegal(template: string, vars: LegalVars): string {
   return template
     .replace(/\{controller\}/g, vars.controller)
     .replace(/\{email\}/g, vars.email)
     .replace(/\{github\}/g, vars.github)
-    .replace(/\{org\}/g, vars.org);
+    .replace(/\{org\}/g, vars.org)
+    .replace(/\{updatedIt\}/g, vars.updatedIt)
+    .replace(/\{updatedEn\}/g, vars.updatedEn);
 }

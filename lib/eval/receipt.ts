@@ -66,8 +66,6 @@ function asPemBlock(kind: "PRIVATE KEY" | "PUBLIC KEY", body: string): string {
 
 /**
  * Accept dotenv `\n`, quoted values, real newlines, or a concatenated one-line PEM.
- *
- * @example normalizePem("-----BEGIN PUBLIC KEY-----MCow...-----END PUBLIC KEY-----")
  */
 export function normalizePem(raw: string): string {
   let s = unwrapQuotes(raw);
@@ -89,8 +87,6 @@ function pemFromEnv(
 
 /**
  * DSSE pre-authentication encoding: DSSEv1 SP len(type) SP type SP len(payload) SP payload.
- *
- * @example dssePae("text/plain", Buffer.from("hi"))
  */
 export function dssePae(payloadType: string, payload: Buffer): Buffer {
   const typeBuf = Buffer.from(payloadType, "utf8");
@@ -108,8 +104,6 @@ export function dssePae(payloadType: string, payload: Buffer): Buffer {
 
 /**
  * Hex SHA-256 of the canonical manifest. No keys. Layer one.
- *
- * @example digestRunManifest(manifest)
  */
 export function digestRunManifest(manifest: RunManifest): string {
   return createHash("sha256").update(manifestBytes(manifest)).digest("hex");
@@ -129,8 +123,6 @@ export function verifyDigest(manifest: RunManifest, digest: string): boolean {
 
 /**
  * Ed25519 signature of PAE(type, canonical JSON). Layer two. Base64.
- *
- * @example signManifestDsse(manifest, privateKey)
  */
 export function signManifestDsse(manifest: RunManifest, privateKey: KeyObject): string {
   const pae = dssePae(DSSE_PAYLOAD_TYPE, manifestBytes(manifest));
@@ -238,8 +230,6 @@ export function exportPublicKeyPem(key: KeyObject): string {
 
 /**
  * Harness signing key. PKCS8 PEM, concatenated PEM, or raw PKCS8 base64.
- *
- * @example resultsEd25519Private()
  */
 export function resultsEd25519Private(env?: EvalKeyEnv): KeyObject | null {
   return parseEd25519Private(pemFromEnv(env, "VSARENA_RESULTS_ED25519_PRIVATE"));
@@ -247,8 +237,6 @@ export function resultsEd25519Private(env?: EvalKeyEnv): KeyObject | null {
 
 /**
  * Published verify key. Dedicated PEM, or derived from the private key (local single-box).
- *
- * @example resultsEd25519Public()
  */
 export function resultsEd25519Public(env?: EvalKeyEnv): KeyObject | null {
   const fromPublic = parseEd25519Public(pemFromEnv(env, "VSARENA_RESULTS_ED25519_PUBLIC"));
@@ -271,8 +259,6 @@ export function asPublicKey(value: KeyObject | string | null | undefined): KeyOb
 
 /**
  * Re-verify a stored eval blob on read. New rows: digest + Ed25519. Legacy: HMAC.
- *
- * @example verifyStoredReceipt(manifest, blob)
  */
 export function verifyStoredReceipt(
   manifest: RunManifest,

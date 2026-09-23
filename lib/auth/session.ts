@@ -4,8 +4,6 @@ import type { User } from "@supabase/supabase-js";
 
 /**
  * Current Auth user, or null if signed out / Supabase off.
- *
- * @example const user = await getSessionUser()
  */
 export async function getSessionUser(): Promise<User | null> {
   if (!isSupabaseConfigured()) return null;

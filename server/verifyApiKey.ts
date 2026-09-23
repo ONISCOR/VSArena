@@ -6,6 +6,8 @@ import { hasServiceRole } from "../lib/supabase/env";
 export interface ApiKeyOk {
   ok: true;
   username: string;
+  /** Profile uuid. Null only in open-dev (no service role). */
+  profileId: string | null;
 }
 
 export interface ApiKeyBad {
@@ -15,8 +17,6 @@ export interface ApiKeyBad {
 
 /**
  * Validate a harness hello key against Postgres.
- *
- * @example const check = await verifyHarnessApiKey(hello.api_key)
  */
 export async function verifyHarnessApiKey(apiKey: string): Promise<ApiKeyOk | ApiKeyBad> {
   const trimmed = apiKey.trim();
@@ -27,18 +27,18 @@ export async function verifyHarnessApiKey(apiKey: string): Promise<ApiKeyOk | Ap
       return { ok: false, reason: "harness misconfigured: service role missing" };
     }
     console.warn("[vsarena-harness] no SUPABASE_SERVICE_ROLE_KEY — accepting any api_key (dev only)");
-    return { ok: true, username: "dev" };
+    return { ok: true, username: "dev", profileId: null };
   }
   const admin = createAdminSupabase();
   const { data, error } = await admin
     .from("profiles")
-    .select("username")
+    .select("id, username")
     .eq("api_key", trimmed)
     .maybeSingle();
   if (error) {
     console.error("[vsarena-harness] api_key lookup failed", error.message);
     return { ok: false, reason: "api_key lookup failed" };
   }
-  if (!data?.username) return { ok: false, reason: "invalid api_key" };
-  return { ok: true, username: String(data.username) };
+  if (!data?.username || !data?.id) return { ok: false, reason: "invalid api_key" };
+  return { ok: true, username: String(data.username), profileId: String(data.id) };
 }

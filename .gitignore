@@ -92,7 +92,6 @@ LOCAL.md
 SCRATCH.md
 **/README.local.md
 **/README.private.md
-deploy/harness/README.md
 /notes/
 /scratch/
 /tmp/
@@ -133,10 +132,19 @@ deploy/harness/README.md
 **/vsarena-paper*.pdf
 **/vsarena-paper*.tex
 
+# --- business / strategy (never publish) ---
+**/VSArena-*-Business-Plan*.pdf
+**/business-plan*.pdf
+**/business-plan*.md
+# Founder open-core map (confidential — local only)
+docs/open-core.md
+**/open-core.md
+
 # --- misc dumps ---
 *.webm
 *.mp4
 !public/**/*.mp4
+!public/**/*.webm
 dump.rdb
 *.sqlite
 *.sqlite3

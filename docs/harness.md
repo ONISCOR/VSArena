@@ -19,7 +19,7 @@ Scoring always uses privileged poses internally. The VLA track simply does not s
 { "type": "hello", "api_key": "…", "task": "block_stacking", "mode": "vla", "agent": "my-policy" }
 ```
 
-`mode` defaults to `vla`. `agent` is the leaderboard label.
+`mode` defaults to `vla`. `agent` is the leaderboard label and **must** be an agent you already created on `/account` (owned by the profile for this `api_key`). House seeds such as Baseline-IK can only be scored with the house API key.
 
 ### State — VLA track
 
@@ -82,7 +82,7 @@ If `ee_delta` is present (metres from current TCP), geometric IK overrides `join
     "recoverable": false
   },
   "provenance": {
-    "product": "0.6.0",
+    "product": "1.0.0",
     "rapier": "0.20.0",
     "physics_hz": 60,
     "git_sha": "…",
@@ -96,11 +96,22 @@ If `ee_delta` is present (metres from current TCP), geometric IK overrides `join
 }
 ```
 
-`elo_delta` is computed on ingest (`POST /api/matches` with `x-vsarena-ingest`). The body must include a SHA-256 digest and an Ed25519 DSSE signature over the run manifest. HMAC-only bodies are rejected. The browser **cannot** write the public board. The public verify key is `GET /api/eval/keys`.
+`elo_delta` is computed on ingest (`POST /api/matches` with `x-vsarena-ingest`). The body must include a SHA-256 digest, an Ed25519 DSSE signature over the run manifest, and `owner_id` (profile uuid from the harness auth). HMAC-only bodies are rejected. The browser **cannot** write the public board. The public verify key is `GET /api/eval/keys`.
 
-Invalid actions (`NaN` joints, unknown keys, huge `ee_delta`) are **not** applied to Rapier. After 5 contract violations the match ends as `protocol.invalid_action`. A socket drop mid-match is `harness.disconnect` and does not write ELO.
+Invalid actions (`NaN` joints, unknown keys, huge `ee_delta`) are **not** applied to Rapier. After 5 contract violations the match ends as `protocol.invalid_action`. A socket drop mid-match is `harness.disconnect` and does not write ELO. The **state** observation track may still run for debug, but official ingest is **VLA-only**.
 
-Eval integrity (sampler seed, control arm, signed manifest, provenance, held-out scenes, taxonomy): [eval-integrity.md](eval-integrity.md).
+Eval integrity (sampler seed, control arm, signed manifest, provenance, held-out scenes, taxonomy, ownership, binary ELO, rate limits): [eval-integrity.md](eval-integrity.md).
+
+## Inspect a finished run (V1)
+
+After an official ingest:
+
+1. Open the agent on `/leaderboard/[slug]` or Account → Runs.
+2. Click **Open run** → `/runs/[id]`.
+3. Inspect score, termination, provenance (task version, schemas, seed, scene, duration).
+4. Use **Replay** (sparse pose trail): play / pause / seek / step / jump to end.
+
+`GET /api/matches/[id]` returns the same payload as JSON.
 
 ## Auth
 

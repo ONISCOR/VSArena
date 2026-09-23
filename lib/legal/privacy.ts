@@ -4,19 +4,19 @@ import type { LegalDocument } from "@/lib/legal/types";
 const it: LegalDocument = {
   kicker: "Privacy",
   title: "Informativa sul trattamento dei dati personali",
-  updatedLine: "Ultimo aggiornamento: 1 settembre 2026. Versione 1.1.",
+  updatedLine: "Ultimo aggiornamento: {updatedIt}. VSArena V1.",
   intro: [
     "Questa informativa è resa ai sensi degli articoli 13 e 14 del Regolamento (UE) 2016/679 (GDPR) e del D.lgs. 196/2003 come modificato dal D.lgs. 101/2018 (Codice Privacy), per chi usa il sito e i servizi VSArena.",
-    "Il servizio è un MVP gratuito di ricerca e valutazione di agenti embodied. Non è un prodotto di robotica industriale e non è destinato a minori di 16 anni.",
+    "Il servizio è VSArena V1: un esame pubblico gratuito per agenti embodied su un compito di impilamento. Non è un prodotto di robotica industriale e non è destinato a minori di 16 anni.",
     "VSArena non è una società costituita, non è iscritta al registro delle imprese e non è una persona giuridica. È un progetto open source del laboratorio indipendente {org}, portato avanti da una persona fisica. {org} è il nome del laboratorio e dell’organizzazione GitHub che ospita il repository: non è una società iscritta. Se nascerà una società, il titolare e questa informativa verranno aggiornati.",
-    "Il Titolare è identificato in pubblico come {controller}. Contatto: {email}. Repository: {github}.",
+    "Il Titolare è identificato in pubblico con lo pseudonimo {controller}. Contatto: {email}. Repository: {github}.",
   ],
   sections: [
     {
       title: "1. Titolare del trattamento",
       blocks: [
         {
-          p: "Titolare del trattamento è {controller}, persona fisica founder del laboratorio indipendente {org}, che gestisce il progetto open source VSArena con operatività in Italia. Non esiste una società, una S.r.l., una S.p.A. o altro ente che figuri come titolare: il trattamento è imputato alla persona fisica che mantiene il progetto. {org} non è una persona giuridica. Non è nominato un Responsabile della protezione dei dati (DPO): l’obbligo di designazione di cui all’art. 37 GDPR non ricorre, in quanto non si tratta di pubblica amministrazione, non si effettua monitoraggio regolare e sistematico su larga scala, né si trattano categorie particolari di dati su larga scala.",
+          p: "Titolare del trattamento è {controller}, persona fisica identificata con questo pseudonimo, founder del laboratorio indipendente {org}, che gestisce il progetto open source VSArena con operatività in Italia. Non esiste una società, una S.r.l., una S.p.A. o altro ente che figuri come titolare: il trattamento è imputato alla persona fisica che mantiene il progetto. {org} non è una persona giuridica. Non è nominato un Responsabile della protezione dei dati (DPO): l’obbligo di designazione di cui all’art. 37 GDPR non ricorre, in quanto non si tratta di pubblica amministrazione, non si effettua monitoraggio regolare e sistematico su larga scala, né si trattano categorie particolari di dati su larga scala.",
         },
         {
           p: "Per esercitare i diritti o per domande sul trattamento: apri una issue sul repository {github} oppure scrivi a {email}. Rispondiamo senza ingiustificato ritardo e, in ogni caso, entro un mese dalla ricezione, prorogabile di due mesi nei casi previsti dall’art. 12 GDPR.",
@@ -34,7 +34,9 @@ const it: LegalDocument = {
             "Agenti e classifica: nome agente, URL del repository se lo indichi, punteggi, ELO, stato e orari delle partite. Questi campi sono pubblici per disegno del servizio.",
             "Dati di partita: pose, coppie articolari, esito, telemetria usata per calcolare il punteggio. Servono a valutare la prova, non a profilarti per pubblicità.",
             "Dati tecnici: indirizzo IP, user agent, orari di accesso, cookie di sessione, log di errore. Servono a far funzionare il sito e a contenerne gli abusi.",
-            "Preferenze: lingua dell’interfaccia (cookie vsarena-locale) e, sul tuo dispositivo, la scelta tra guida neofita o researcher (localStorage).",
+            "Preferenze sul dispositivo: lingua (cookie vsarena-locale), tema (localStorage vsarena-theme-v1), stato del menu (vsarena-sidebar-v1), guida Invio (vsarena-submit-guide).",
+            "Playground e teleoperazione in Studio: pose e telemetria restano nel tab. Non scrivono ELO pubblico. Gli script canned del Playground non sono una policy.",
+            "Demo registrate in Studio: file scaricato in locale sul tuo computer. Non lo carichiamo noi, salvo che tu lo invii altrove.",
           ],
         },
         {
@@ -145,7 +147,9 @@ const it: LegalDocument = {
           ul: [
             "vsarena-locale: ricorda italiano o inglese. Durata 12 mesi. Prima parte. Necessario alla preferenza linguistica.",
             "Cookie di sessione Supabase Auth: ti riconoscono dopo il login GitHub. Prima parte / fornitore Auth. Necessari all’account.",
-            "localStorage vsarena-submit-guide: ricorda se hai aperto la guida neofita o researcher. Resta sul tuo browser, non lo inviamo a un ad-network.",
+            "localStorage vsarena-theme-v1: tema chiaro o scuro, solo sul dispositivo.",
+            "localStorage vsarena-sidebar-v1: menu laterale aperto o chiuso.",
+            "localStorage vsarena-submit-guide: guida neofita o researcher. Resta sul tuo browser, non lo inviamo a un ad-network.",
           ],
         },
         {
@@ -165,7 +169,7 @@ const it: LegalDocument = {
       title: "12. Sicurezza",
       blocks: [
         {
-          p: "Adottiamo misure adeguate al rischio di un MVP: HTTPS, chiavi API ruotabili, il punteggio ufficiale non è scrivibile dal browser, ruoli distinti sul database. Nessun sistema è infallibile. Se una chiave API è esposta, ruotala subito dalla pagina Account.",
+          p: "Adottiamo misure adeguate al rischio di VSArena V1: HTTPS, chiavi API ruotabili, il punteggio ufficiale non è scrivibile dal browser, ruoli distinti sul database. Nessun sistema è infallibile. Se una chiave API è esposta, ruotala subito dalla pagina Account.",
         },
       ],
     },
@@ -183,19 +187,19 @@ const it: LegalDocument = {
 const en: LegalDocument = {
   kicker: "Privacy",
   title: "Privacy notice",
-  updatedLine: "Last updated: 1 September 2026. Version 1.1.",
+  updatedLine: "Last updated: {updatedEn}. VSArena V1.",
   intro: [
     "This notice is provided under Articles 13 and 14 of Regulation (EU) 2016/679 (GDPR) and Italian Legislative Decree 196/2003 as amended by Legislative Decree 101/2018, for anyone who uses the VSArena site and services.",
-    "The service is a free research MVP for evaluating embodied agents. It is not industrial robotics software and is not intended for children under 16.",
+    "The service is VSArena V1: a free public stacking exam for embodied agents. It is not industrial robotics software and is not intended for children under 16.",
     "VSArena is not an incorporated company, is not listed in a companies register, and is not a legal entity. It is an open-source project of the independent lab {org}, run by a natural person. {org} is the lab name and the GitHub organization that hosts the repository: it is not a registered company. If a company is formed later, the controller and this notice will be updated.",
-    "The controller is identified in public as {controller}. Contact: {email}. Repository: {github}.",
+    "The controller is identified in public under the pseudonym {controller}. Contact: {email}. Repository: {github}.",
   ],
   sections: [
     {
       title: "1. Controller",
       blocks: [
         {
-          p: "The controller is {controller}, a natural person and founder of the independent lab {org}, running the VSArena open-source project from Italy. There is no company, LLC, Ltd or other legal entity acting as controller: processing is attributed to the individual who maintains the project. {org} is not a legal entity. No data protection officer has been appointed: Article 37 GDPR does not require one here (we are not a public body, we do not carry out large-scale regular systematic monitoring, and we do not process special-category data on a large scale).",
+          p: "The controller is {controller}, a natural person identified by this pseudonym and founder of the independent lab {org}, running the VSArena open-source project from Italy. There is no company, LLC, Ltd or other legal entity acting as controller: processing is attributed to the individual who maintains the project. {org} is not a legal entity. No data protection officer has been appointed: Article 37 GDPR does not require one here (we are not a public body, we do not carry out large-scale regular systematic monitoring, and we do not process special-category data on a large scale).",
         },
         {
           p: "To exercise your rights or ask about processing: open an issue at {github} or write to {email}. We reply without undue delay and in any event within one month, extendable by two months in the cases allowed by Article 12 GDPR.",
@@ -213,7 +217,9 @@ const en: LegalDocument = {
             "Agents and leaderboard: agent name, repo URL if you add one, scores, ELO, match status and timestamps. These fields are public by design.",
             "Match data: poses, joint torques, outcome, telemetry used to score the task. This is for evaluation, not for ads.",
             "Technical data: IP address, user agent, access times, session cookies, error logs — to run the site and limit abuse.",
-            "Preferences: UI language (vsarena-locale cookie) and, on your device, beginner vs researcher guide (localStorage).",
+            "On-device preferences: UI language (vsarena-locale cookie), theme (vsarena-theme-v1), sidebar (vsarena-sidebar-v1), Submit guide (vsarena-submit-guide).",
+            "Playground and Studio teleop: poses and telemetry stay in the tab. They do not write public ELO. Playground canned scripts are not a policy.",
+            "Demos recorded in Studio: a file downloaded onto your computer. We do not upload it unless you send it elsewhere.",
           ],
         },
         {
@@ -324,7 +330,9 @@ const en: LegalDocument = {
           ul: [
             "vsarena-locale: remembers Italian or English. 12 months. First-party. Needed for the language preference.",
             "Supabase Auth session cookies: recognise you after GitHub login. Needed for the account.",
-            "localStorage vsarena-submit-guide: remembers beginner vs researcher. Stays on your device; we do not send it to an ad network.",
+            "localStorage vsarena-theme-v1: light or dark theme, on-device only.",
+            "localStorage vsarena-sidebar-v1: side menu open or closed.",
+            "localStorage vsarena-submit-guide: beginner vs researcher. Stays on your device; we do not send it to an ad network.",
           ],
         },
         {
@@ -344,7 +352,7 @@ const en: LegalDocument = {
       title: "12. Security",
       blocks: [
         {
-          p: "Measures are sized for an MVP: HTTPS, rotatable API keys, official scores not writable from the browser, distinct database roles. No system is perfect. If an API key leaks, rotate it from Account immediately.",
+          p: "Measures are sized for VSArena V1: HTTPS, rotatable API keys, official scores not writable from the browser, distinct database roles. No system is perfect. If an API key leaks, rotate it from Account immediately.",
         },
       ],
     },
@@ -361,8 +369,6 @@ const en: LegalDocument = {
 
 /**
  * Privacy notice for the active locale.
- *
- * @example privacyDocument("it")
  */
 export function privacyDocument(locale: Locale): LegalDocument {
   return locale === "it" ? it : en;

@@ -6,8 +6,6 @@ export const dynamic = "force-dynamic";
 
 /**
  * End the Supabase session and return home.
- *
- * @example POST /auth/logout
  */
 export async function POST(request: Request) {
   const origin = new URL(request.url).origin;

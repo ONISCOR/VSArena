@@ -20,8 +20,6 @@ function isTopCube(id: string): boolean {
 
 /**
  * Magenta sits on the live orange cube (not the empty ghost slot) so a small base offset still stacks.
- *
- * @example stackPlace(magentaBlock, state.scene.blocks)
  */
 function stackPlace(block: SceneBlock, blocks: SceneBlock[]): [number, number, number] {
   const target: [number, number, number] = [block.target_pose[0], block.target_pose[1], block.target_pose[2]];
@@ -34,8 +32,6 @@ function stackPlace(block: SceneBlock, blocks: SceneBlock[]): [number, number, n
 /**
  * Scripted IK pick-and-place. Always finishes the cube currently in the gripper
  * before starting another pick (no cyan-held / magenta-pinch deadlock).
- *
- * @example const agent = new BaselineIK(); agent.act(state)
  */
 export class BaselineIK implements Agent {
   private phase: Phase = "hover";

@@ -6,8 +6,6 @@ import { cn } from "@/lib/utils";
 
 /**
  * EN / IT toggle. Writes vsarena-locale for a year.
- *
- * @example <LanguageSwitcher />
  */
 export function LanguageSwitcher() {
   const { locale, setLocale, m } = useI18n();

@@ -2,8 +2,6 @@
 
 /**
  * Shared secret the standalone harness sends as `x-vsarena-ingest`.
- *
- * @example harnessIngestSecret()
  */
 export function harnessIngestSecret(): string {
   return (process.env.HARNESS_INGEST_SECRET ?? "").trim();
@@ -11,8 +9,6 @@ export function harnessIngestSecret(): string {
 
 /**
  * True when leaderboard writes from the harness are enabled.
- *
- * @example if (ingestConfigured()) postResult()
  */
 export function ingestConfigured(): boolean {
   return harnessIngestSecret().length >= 16;
@@ -20,8 +16,6 @@ export function ingestConfigured(): boolean {
 
 /**
  * Constant-time-ish compare of the ingest header. Not a substitute for TLS.
- *
- * @example requestHasIngestSecret(request)
  */
 export function requestHasIngestSecret(request: Request): boolean {
   const expected = harnessIngestSecret();

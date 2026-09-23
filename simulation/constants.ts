@@ -90,8 +90,6 @@ export const STACK_ORIGIN: [number, number, number] = [0.48, TABLE_TOP_Y, 0.22];
 
 /**
  * Center Y of stack layer 0 (table), 1, 2.
- *
- * @example stackSlotY(1) // orange sits on cyan
  */
 export function stackSlotY(layer: number): number {
   return TABLE_TOP_Y + CUBE_HALF + layer * CUBE_SIZE;
@@ -131,8 +129,6 @@ export interface TableWallDesc {
 
 /**
  * Four rim walls sitting on the table top (local to the table body).
- *
- * @example TABLE_WALLS[0].halfExtents
  */
 export const TABLE_WALLS: TableWallDesc[] = (() => {
   const t = TABLE_WALL_HALF_THICKNESS;

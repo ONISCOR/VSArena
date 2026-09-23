@@ -14,8 +14,6 @@ const LocaleContext = createContext<LocaleContextValue | null>(null);
 
 /**
  * Client dictionary. Cookie persists the choice; html lang updates immediately.
- *
- * @example <LocaleProvider locale="en">{children}</LocaleProvider>
  */
 export function LocaleProvider({ locale: initial, children }: { locale: Locale; children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(initial);
@@ -38,8 +36,6 @@ export function LocaleProvider({ locale: initial, children }: { locale: Locale; 
 
 /**
  * Current UI strings.
- *
- * @example const { m, setLocale } = useI18n()
  */
 export function useI18n(): LocaleContextValue {
   const ctx = useContext(LocaleContext);

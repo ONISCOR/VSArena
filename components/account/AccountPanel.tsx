@@ -31,17 +31,16 @@ interface AccountPanelProps {
   apiKey: string;
   agents: AgentRow[];
   embedded?: boolean;
+  mode?: "all" | "key" | "agents";
 }
 
 const fieldClass =
-  "mt-1.5 h-10 w-full rounded-xl border border-white/12 bg-black/40 px-3 text-sm text-white outline-none placeholder:text-arena-muted/70 focus:border-arena-cyan";
+  "mt-1.5 h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--lift)] px-3 text-sm text-[var(--ink)] outline-none placeholder:text-[var(--faint)] focus:border-[var(--cyan)]";
 
 /**
  * Reveal/copy/rotate API key and register an agent for the leaderboard.
- *
- * @example <AccountPanel username="Aran Kair" apiKey="…" agents={[]} />
  */
-export function AccountPanel({ apiKey, agents, embedded = false }: AccountPanelProps) {
+export function AccountPanel({ apiKey, agents, embedded = false, mode = "all" }: AccountPanelProps) {
   const { m } = useI18n();
   const [key, setKey] = useState(apiKey);
   const [shown, setShown] = useState(false);
@@ -128,8 +127,12 @@ export function AccountPanel({ apiKey, agents, embedded = false }: AccountPanelP
     }
   }
 
+  const showKey = mode === "all" || mode === "key";
+  const showAgents = mode === "all" || mode === "agents";
+
   return (
     <div className="space-y-5">
+      {showKey ? (
       <section className="panel p-6">
         <StepHead embedded={embedded} n={m.account.step1} title={m.account.apiKey} body={m.account.apiHelp} />
         {freshKey ? (
@@ -167,7 +170,10 @@ export function AccountPanel({ apiKey, agents, embedded = false }: AccountPanelP
         <p className="mt-1 text-xs leading-5 text-arena-muted">{m.account.rotateHint}</p>
         <Notice notice={notice} at="key" />
       </section>
+      ) : null}
 
+      {showAgents ? (
+      <>
       <section className="panel p-6">
         <StepHead embedded={embedded} n={m.account.step2} title={m.account.register} body={m.account.registerHelp} />
         <div className="mt-5 grid gap-4">
@@ -230,6 +236,8 @@ export function AccountPanel({ apiKey, agents, embedded = false }: AccountPanelP
         )}
         <Notice notice={notice} at="look" />
       </section>
+      </>
+      ) : null}
     </div>
   );
 }

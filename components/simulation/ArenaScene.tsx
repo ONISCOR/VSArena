@@ -7,15 +7,12 @@ import { attachKeyboard, createInputBuffer } from "@/simulation/input";
 import { ArenaSimulation } from "@/simulation/rapierWorld";
 import { useHudStore } from "@/lib/store";
 import { useDemoStore } from "@/lib/dataset/store";
-import { createLocalMatch, stepLocalMatch, type LocalMatch } from "@/lib/harness/localMatch";
+import { createLocalMatch, createTrickMatch, stepLocalMatch, type LocalMatch } from "@/lib/harness/localMatch";
 import { rasterScene, VLA_IMAGE_SIZE } from "@/lib/vision/raster";
-import { ArenaSet } from "@/components/simulation/ArenaSet";
-import { Blocks } from "@/components/simulation/Blocks";
+import { IndustrialHall } from "@/components/simulation/set-v2";
 import { ColliderDebug } from "@/components/simulation/ColliderDebug";
 import { GridFloor } from "@/components/simulation/GridFloor";
-import { RobotArm } from "@/components/simulation/RobotArm";
-import { Table } from "@/components/simulation/Table";
-import { TargetZone } from "@/components/simulation/TargetZone";
+import { SpectateWorkcell } from "@/components/simulation/SpectateWorkcell";
 import type { BlockState, DebugBox, JointState, SimulationSnapshot } from "@/simulation/types";
 
 /**
@@ -31,7 +28,6 @@ export function ArenaScene() {
   const blocksRef = useRef<BlockState[]>([]);
   const debugRef = useRef<DebugBox[]>([]);
   const matchRef = useRef<LocalMatch | null>(null);
-  const lastPlanRef = useRef("");
   const lastAgentTick = useRef(-1);
   const autoResetAt = useRef(0);
 
@@ -72,7 +68,11 @@ export function ArenaScene() {
     applySnapshot(snapshot, jointsRef, blocksRef, debugRef);
 
     const request = useHudStore.getState().matchRequest;
-    const startedThisFrame = request === "start-baseline" || request === "start-colorseek" || request === "reset";
+    const startedThisFrame =
+      request === "start-baseline" ||
+      request === "start-colorseek" ||
+      request === "start-trick" ||
+      request === "reset";
     if (request === "start-baseline" || request === "start-colorseek") {
       const mode = request === "start-colorseek" ? "vla" : "state";
       useHudStore.getState().consumeMatchRequest();
@@ -80,10 +80,17 @@ export function ArenaScene() {
       sim.reset();
       sim.setAgentCommand(null);
       matchRef.current = createLocalMatch(mode);
-      lastPlanRef.current = "";
       lastAgentTick.current = -1;
-      useHudStore.getState().setMatchRunning(mode === "vla" ? "ColorSeek VLA match started" : "Baseline-IK match started");
-      useHudStore.getState().pushLog(`Match ${matchRef.current.matchId.slice(0, 8)} ${mode}`);
+      useHudStore.getState().setMatchRunning();
+    } else if (request === "start-trick") {
+      const trick = useHudStore.getState().playTrick;
+      useHudStore.getState().consumeMatchRequest();
+      autoResetAt.current = 0;
+      sim.reset();
+      sim.setAgentCommand(null);
+      matchRef.current = trick ? createTrickMatch(trick) : null;
+      lastAgentTick.current = -1;
+      if (matchRef.current) useHudStore.getState().setMatchRunning();
     } else if (request === "abort") {
       useHudStore.getState().consumeMatchRequest();
       autoResetAt.current = 0;
@@ -117,16 +124,12 @@ export function ArenaScene() {
       if (tick !== lastAgentTick.current) {
         lastAgentTick.current = tick;
         const result = stepLocalMatch(matchRef.current, sim);
-        if (matchRef.current.lastPlan && matchRef.current.lastPlan !== lastPlanRef.current) {
-          lastPlanRef.current = matchRef.current.lastPlan;
-          useHudStore.getState().pushLog(matchRef.current.lastPlan);
-        }
         if (result) {
+          const trick = matchRef.current.kind === "trick";
           matchRef.current = null;
           sim.setAgentCommand(null);
           useHudStore.getState().finishMatch(result);
-          autoResetAt.current = performance.now() + AUTO_RESET_DELAY_MS;
-          // In-browser IK is unofficial: ELO only updates from the hosted harness ingest.
+          if (!trick) autoResetAt.current = performance.now() + AUTO_RESET_DELAY_MS;
         }
       }
     }
@@ -164,7 +167,6 @@ export function ArenaScene() {
       }
       if (demo.recorder.isFull) {
         useDemoStore.getState().stopAndDownload();
-        useHudStore.getState().pushLog("Demo auto-stop at 60s / 300 frames");
       }
     }
 
@@ -189,12 +191,9 @@ export function ArenaScene() {
 
   return (
     <>
-      <ArenaSet />
-      <Table />
+      <IndustrialHall />
+      <SpectateWorkcell jointsRef={jointsRef} blocksRef={blocksRef} ready={bootstrapped} />
       <GridFloor />
-      <TargetZone />
-      <RobotArm jointsRef={jointsRef} />
-      {bootstrapped ? <Blocks blocksRef={blocksRef} /> : null}
       <ColliderDebug boxesRef={debugRef} />
     </>
   );
@@ -239,7 +238,5 @@ function resetTable(
       },
       elo_delta: 0,
     });
-  } else {
-    useHudStore.getState().pushLog("Table reset");
   }
 }

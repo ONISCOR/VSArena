@@ -5,19 +5,21 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/components/i18n/LocaleProvider";
 import { displayNameFromMeta, handleFromMeta } from "@/lib/auth/identity";
+import { startGithubSignIn } from "@/lib/auth/startGithub";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createBrowserSupabase } from "@/lib/supabase/browser";
 
 /**
- * GitHub OAuth control for the site header.
- *
- * @example <AuthButton />
+ * GitHub control. Sign-in stays on this origin (not vsarena.vercel.app).
  */
-export function AuthButton() {
+export function AuthButton({ className }: { className?: string }) {
   const { m } = useI18n();
   const [label, setLabel] = useState<string | null>(null);
   const pathname = usePathname();
   const enabled = isSupabaseConfigured();
+  const fallback =
+    className ??
+    "rounded-full px-3 py-1.5 text-sm text-[var(--mute)] hover:bg-[var(--lift)] hover:text-[var(--ink)]";
 
   useEffect(() => {
     if (!enabled) return;
@@ -50,43 +52,33 @@ export function AuthButton() {
     };
   }, [enabled]);
 
-  if (!enabled) return null;
-
-  if (label) {
+  if (!enabled) {
     return (
-      <form action="/auth/logout" method="post" className="flex items-center gap-3">
-        <Link href="/account" className="max-w-[12rem] truncate text-sm text-white hover:text-arena-cyan">
-          {label}
-        </Link>
-        <button type="submit" className="text-sm text-arena-muted hover:text-white">
-          {m.nav.signOut}
-        </button>
-      </form>
+      <Link href="/account" className={fallback}>
+        {m.nav.account}
+      </Link>
     );
   }
 
-  async function signIn() {
-    const next = pathname.startsWith("/auth") ? "/" : pathname || "/";
-    try {
-      const supabase = createBrowserSupabase();
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "github",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-        },
-      });
-      if (error) window.location.href = "/auth/error?reason=oauth";
-    } catch {
-      window.location.href = "/auth/error?reason=oauth";
-    }
+  if (label) {
+    return (
+      <div className="flex w-full flex-col gap-2">
+        <Link href="/account?tab=profile" className={fallback}>
+          {label}
+        </Link>
+        <form action="/auth/logout" method="post">
+          <button type="submit" className="w-full text-center text-[11px] text-[var(--faint)] hover:text-[var(--ink)]">
+            {m.nav.signOut}
+          </button>
+        </form>
+      </div>
+    );
   }
 
+  const next = pathname.startsWith("/auth") ? "/account" : pathname || "/account";
+
   return (
-    <button
-      type="button"
-      onClick={() => void signIn()}
-      className="rounded-full px-3 py-1.5 text-sm text-arena-muted hover:bg-white/5 hover:text-white"
-    >
+    <button type="button" onClick={() => void startGithubSignIn(next)} className={fallback}>
       {m.nav.signIn}
     </button>
   );

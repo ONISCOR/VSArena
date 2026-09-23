@@ -21,8 +21,6 @@ function finiteNumber(value: unknown): value is number {
 
 /**
  * Validate an on-wire action before it touches physics.
- *
- * @example parseActionContract({ gripper_state: "open" })
  */
 export function parseActionContract(action: unknown): ActionContractOk | ActionContractBad {
   if (!action || typeof action !== "object") {

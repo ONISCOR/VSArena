@@ -1,6 +1,9 @@
 import type { ControlArm } from "@/lib/eval/control";
+import type { EvalProvenance } from "@/lib/eval/provenance";
+import type { ReplayArtifact } from "@/lib/eval/replay";
+import type { FailureRecord } from "@/lib/eval/taxonomy";
 
-/** WebSocket / local-loop contract. Assumption: joint_1..4 map to yaw, shoulder, elbow, wrist. */
+/** WebSocket / local-loop contract. joint_1..4 = yaw, shoulder, elbow, wrist. */
 
 export const JOINT_KEYS = ["joint_1", "joint_2", "joint_3", "joint_4"] as const;
 export type JointKey = (typeof JOINT_KEYS)[number];
@@ -65,20 +68,11 @@ export interface ResultMessage {
     joint_torque_telemetry: { peak: number; avg: number; eval?: unknown };
   };
   elo_delta: number;
-  /** Published taxonomy — policy vs protocol vs harness. */
-  failure?: {
-    code: string;
-    domain: string;
-    message: string;
-    recoverable: boolean;
-  };
-  provenance?: object;
-  replay?: object;
-  /** Benign control arm (public canonical) next to the scored condition. */
+  failure?: FailureRecord;
+  provenance?: EvalProvenance;
+  replay?: ReplayArtifact;
   control?: ControlArm;
-  /** SHA-256 hex of the canonical run manifest (integrity, no key). */
   digest?: string;
-  /** Ed25519-DSSE (identity) or legacy HMAC hex. */
   signature?: string;
 }
 
@@ -103,6 +97,5 @@ export interface ErrorMessage {
 export type HarnessMessage = StateMessage | ActionMessage | ResultMessage | HelloMessage | ErrorMessage;
 
 export interface Agent {
-  /** @example new BaselineIK().act(state) */
   act(state: StateMessage): ActionMessage["action"];
 }

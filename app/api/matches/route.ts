@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { resultsEd25519Public } from "@/lib/eval/receipt";
+import { isAgentOwnershipError, isOfficialIngestError, isRateLimitError } from "@/lib/matches/errors";
 import { requestHasIngestSecret } from "@/lib/matches/ingestAuth";
 import { parseOfficialIngest } from "@/lib/matches/ingestPayload";
 import { listMatches, recordMatch } from "@/lib/matches/store";
@@ -12,9 +13,7 @@ export async function GET() {
 }
 
 /**
- * Official leaderboard write. Harness-only. Body must carry digest + Ed25519 DSSE.
- *
- * @example POST /api/matches  header x-vsarena-ingest
+ * Official leaderboard write. Harness-only. Body must carry digest + Ed25519 DSSE + owner_id.
  */
 export async function POST(request: Request) {
   if (!requestHasIngestSecret(request)) {
@@ -35,7 +34,10 @@ export async function POST(request: Request) {
     }
     const stored = await recordMatch(parsed.entry);
     return NextResponse.json(stored, { status: 201 });
-  } catch {
+  } catch (error) {
+    if (isAgentOwnershipError(error) || isOfficialIngestError(error) || isRateLimitError(error)) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json({ error: "invalid json" }, { status: 400 });
   }
 }

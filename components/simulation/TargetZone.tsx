@@ -16,7 +16,7 @@ export function TargetZone() {
       <group position={[x, y, z]}>
         <mesh rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[TARGET_ZONE.radius - 0.008, TARGET_ZONE.radius, 48]} />
-          <meshBasicMaterial color="#F7941E" transparent opacity={0.55} />
+          <meshBasicMaterial color="#F7941E" transparent opacity={0.7} />
         </mesh>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.001, 0]}>
           <circleGeometry args={[TARGET_ZONE.radius - 0.01, 48]} />
@@ -31,9 +31,11 @@ export function TargetZone() {
             <meshStandardMaterial
               color={ghost.color}
               transparent
-              opacity={0.12}
-              roughness={0.25}
-              metalness={0.1}
+              opacity={0.1}
+              roughness={0.22}
+              metalness={0.08}
+              emissive={ghost.color}
+              emissiveIntensity={0.12}
               depthWrite={false}
             />
           </mesh>

@@ -3,6 +3,7 @@ import { LocaleProvider } from "@/components/i18n/LocaleProvider";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { getRequestLocale } from "@/lib/i18n/server";
 import { rootMetadata } from "@/lib/seo";
+import { ThemeProvider } from "@/lib/theme";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -26,11 +27,13 @@ export default function RootLayout({
   const locale = getRequestLocale();
 
   return (
-    <html lang={locale} className="dark">
-      <body className={`${outfit.variable} ${plexMono.variable} flex min-h-screen flex-col bg-arena-bg antialiased`}>
-        <LocaleProvider locale={locale}>
-          <SiteChrome>{children}</SiteChrome>
-        </LocaleProvider>
+    <html lang={locale} data-theme="dark">
+      <body className={`${outfit.variable} ${plexMono.variable} flex min-h-screen flex-col antialiased`}>
+        <ThemeProvider>
+          <LocaleProvider locale={locale}>
+            <SiteChrome>{children}</SiteChrome>
+          </LocaleProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

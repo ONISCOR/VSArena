@@ -37,8 +37,6 @@ function fallbackAgent(slug: string): OgAgent {
 
 /**
  * Edge-safe lookup. Avoids the Node `ws` admin client (and the Windows ImageResponse font path).
- *
- * @example await loadOgAgent("baseline-ik")
  */
 async function loadOgAgent(slug: string): Promise<OgAgent> {
   const house = fallbackAgent(slug);
@@ -127,8 +125,6 @@ async function loadFromSupabase(slug: string, house: OgAgent): Promise<OgAgent |
 
 /**
  * Share card for /leaderboard/[slug]. Name + ELO, not a toy banner.
- *
- * @example fetched as /leaderboard/baseline-ik/opengraph-image
  */
 export default async function AgentOpenGraphImage({ params }: { params: { slug: string } }) {
   const agent = await loadOgAgent(params.slug);
@@ -150,10 +146,43 @@ export default async function AgentOpenGraphImage({ params }: { params: { slug: 
         }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <span style={{ color: "#00AEEF", fontSize: 36, fontWeight: 700 }}>V</span>
-            <span style={{ color: "#F7941E", fontSize: 36, fontWeight: 700 }}>S</span>
-            <span style={{ color: "#ffffff", fontSize: 32, fontWeight: 600, marginLeft: 12 }}>Arena</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ display: "flex", width: 56, height: 56, position: "relative" }}>
+              <div
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  bottom: 0,
+                  width: 26,
+                  height: 26,
+                  borderRadius: 8,
+                  background: "linear-gradient(135deg, #3EE0EA 0%, #0077FF 100%)",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  left: 14,
+                  bottom: 14,
+                  width: 26,
+                  height: 26,
+                  borderRadius: 8,
+                  background: "linear-gradient(135deg, #FFB020 0%, #FF6A00 100%)",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  left: 28,
+                  bottom: 28,
+                  width: 26,
+                  height: 26,
+                  borderRadius: 8,
+                  background: "linear-gradient(135deg, #FF4DB8 0%, #9B00FF 100%)",
+                }}
+              />
+            </div>
+            <span style={{ color: "#ffffff", fontSize: 32, fontWeight: 700 }}>VSArena</span>
           </div>
           <div style={{ color: "#8B949E", fontSize: 22 }}>VLA track</div>
         </div>

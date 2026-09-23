@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vsarena"
-version = "0.5.0"
+version = "1.0.0"
 description = "VSArena SDK — submit and dry-run embodied agents against the block-stacking arena."
 readme = "README.md"
 requires-python = ">=3.11"

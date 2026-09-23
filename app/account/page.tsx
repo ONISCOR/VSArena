@@ -1,21 +1,27 @@
 import { AccountView } from "@/components/account/AccountView";
 import { loadAccountContext } from "@/lib/account/load";
+import { dict } from "@/lib/i18n/messages";
+import { getRequestLocale } from "@/lib/i18n/server";
 import { pageMetadata } from "@/lib/seo";
-
-export const metadata = pageMetadata(
-  "Account",
-  "Your API key, agent name, and the path to a live VLA score.",
-  "/account",
-);
 
 export const dynamic = "force-dynamic";
 
 /**
- * Signed-in desk for SDK key and public agent identity.
- *
- * @example routed at /account
+ * Localized OG title for the signed-in settings desk.
  */
-export default async function AccountPage() {
+export async function generateMetadata() {
+  const a = dict(getRequestLocale()).account;
+  return pageMetadata(a.settingsTitle, a.settingsLead, "/account");
+}
+
+/**
+ * Settings after sign-in: profile, key, agents, official runs, privacy.
+ */
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: { tab?: string };
+}) {
   const ctx = await loadAccountContext();
-  return <AccountView ctx={ctx} />;
+  return <AccountView ctx={ctx} tab={searchParams.tab} />;
 }

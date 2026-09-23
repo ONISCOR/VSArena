@@ -18,8 +18,6 @@ const TORQUE_GAIN = 4.2;
 
 /**
  * Position score in [0, 1]: 1 at the target, 0 beyond POS_SCALE_M.
- *
- * @example positionScore([0, 0, 0], [0, 0, 0]) // 1
  */
 export function positionScore(actual: Vec3, target: Vec3): number {
   const dist = vecDist(actual, target);
@@ -28,8 +26,6 @@ export function positionScore(actual: Vec3, target: Vec3): number {
 
 /**
  * Upright cube score: 1 when local +Y aligns with world up.
- *
- * @example orientationScore([0, 0, 0, 1]) // 1
  */
 export function orientationScore(rotation: Quat): number {
   const up = quatRotateVec(rotation, [0, 1, 0]);
@@ -38,8 +34,6 @@ export function orientationScore(rotation: Quat): number {
 
 /**
  * Mean spatial accuracy across blocks (70% position, 30% upright orientation).
- *
- * @example spatialAccuracy([{ id: "block_cyan", position: BLOCK_TARGETS.block_cyan, rotation: [0,0,0,1], color: "#" }])
  */
 export function spatialAccuracy(blocks: BlockState[]): number {
   if (blocks.length === 0) return 0;
@@ -62,8 +56,6 @@ function blockCompletion(block: BlockState): number {
 
 /**
  * 1.0 if every cube is in its 3D stack slot; a cube still in the gripper does not count.
- *
- * @example taskCompletion(blocks)
  */
 export function taskCompletion(blocks: BlockState[], graspedBlockId: string | null = null): number {
   if (blocks.length === 0) return 0;
@@ -82,8 +74,6 @@ export function createTorqueTracker(): TorqueTracker {
 
 /**
  * Kinematic effort proxy (no real motors). Records Σ|Δq| * gain for this step.
- *
- * @example sampleTorque(tracker, prev, next)
  */
 export function sampleTorque(
   tracker: TorqueTracker,
@@ -110,8 +100,6 @@ export function summarizeTorque(tracker: TorqueTracker): TorqueSample {
 
 /**
  * Final match scores from block poses + torque tracker.
- *
- * @example scoreMatch(blocks, tracker)
  */
 export function scoreMatch(
   blocks: BlockState[],
@@ -125,4 +113,4 @@ export function scoreMatch(
   };
 }
 
-export { eloDelta, expectedScore, kFactor, TASK_RATING } from "./elo";
+export { eloDelta, eloOutcome, expectedScore, kFactor, TASK_RATING } from "./elo";

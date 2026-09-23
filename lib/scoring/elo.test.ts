@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { eloDelta, expectedScore, kFactor } from "@/lib/scoring/elo";
+import { eloDelta, eloOutcome, expectedScore, kFactor } from "@/lib/scoring/elo";
 
 describe("kFactor", () => {
   it("starts high and decays with sample size", () => {
@@ -29,7 +29,15 @@ describe("eloDelta", () => {
     expect(eloDelta(1200, 0, 0)).toBe(-20);
   });
 
-  it("is near zero on a draw vs equal", () => {
-    expect(eloDelta(1200, 0.5, 0)).toBe(0);
+  it("treats fractional outcomes as a loss (binary stack gate)", () => {
+    expect(eloDelta(1200, 0.5, 0)).toBe(-20);
+    expect(eloDelta(1200, 0.99, 0)).toBe(-20);
+  });
+});
+
+describe("eloOutcome", () => {
+  it("requires a full tower", () => {
+    expect(eloOutcome("completed", 1)).toBe(1);
+    expect(eloOutcome("completed", 0.8)).toBe(0);
   });
 });

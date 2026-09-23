@@ -1,9 +1,9 @@
-// Assumption: in-memory only — swap for Supabase service-role inserts when keys exist.
+// In-memory match store for local/dev when Postgres is unset.
 
 import { armFailed } from "@/lib/eval/control";
 import type { ResultMessage } from "@/lib/harness/protocol";
 import { decorateAgents, type DecoratedAgent } from "@/lib/gamification/decorate";
-import { eloDelta } from "@/lib/scoring/elo";
+import { eloDelta, eloOutcome } from "@/lib/scoring/elo";
 import { isPublicLeaderboardAgent } from "@/lib/matches/placeholders";
 import type { AgentAccent, AgentAvatar } from "@/lib/gamification/identity";
 
@@ -45,8 +45,6 @@ const matches: StoredMatch[] = [];
 
 /**
  * URL slug from an agent display name.
- *
- * @example agentSlug("Baseline-IK") // "baseline-ik"
  */
 export function agentSlug(name: string): string {
   return name
@@ -91,14 +89,15 @@ function snapshot(): ArenaAgent[] {
 
 /**
  * Store a match and update the agent's ELO vs the task (rating 1200).
- *
- * @example recordMatch({ agent: "Baseline-IK", ...result })
  */
 export function recordMatch(
-  entry: Omit<StoredMatch, "elo_delta" | "agent_slug" | "stored_at"> & { agent: string },
+  entry: Omit<StoredMatch, "elo_delta" | "agent_slug" | "stored_at"> & {
+    agent: string;
+    owner_id?: string;
+  },
 ): StoredMatch {
   const agent = ensureAgent(entry.agent);
-  const outcome = entry.status === "failed" ? 0 : entry.scores.task_completion_score;
+  const outcome = eloOutcome(entry.status, entry.scores.task_completion_score);
   const played = matches.filter((match) => match.agent_slug === agent.slug).length;
   const delta = eloDelta(agent.elo, outcome, played);
   agent.elo += delta;
@@ -123,6 +122,10 @@ export function listMatchesForAgent(slug: string): StoredMatch[] {
   return matches.filter((match) => match.agent_slug === slug);
 }
 
+export function getMatch(matchId: string): StoredMatch | undefined {
+  return matches.find((match) => match.match_id === matchId);
+}
+
 export function getAgent(slug: string): ArenaAgent | undefined {
   return snapshot().find((agent) => agent.slug === slug);
 }
@@ -141,8 +144,6 @@ export function updateAgentLook(
 
 /**
  * Ranked snapshot for the public table.
- *
- * @example listLeaderboard()[0].rank
  */
 export function listLeaderboard(): Array<ArenaAgent & { rank: number }> {
   const ranked = snapshot()

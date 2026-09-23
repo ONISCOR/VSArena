@@ -27,8 +27,6 @@ function classify(r: number, g: number, b: number): keyof SceneBlobs | null {
 
 /**
  * Centroids of painted cubes / TCP / pad in an `image/rgb8` buffer.
- *
- * @example findBlobs(rasterScene(snap), 128).cyan
  */
 export function findBlobs(rgb: Uint8Array, size: number): SceneBlobs {
   const acc: Record<keyof SceneBlobs, { su: number; sv: number; n: number }> = {
@@ -61,8 +59,6 @@ export function findBlobs(rgb: Uint8Array, size: number): SceneBlobs {
 
 /**
  * Convert a pixel offset into a table-plane `ee_delta` (metres).
- *
- * @example pixelToEeDelta(4, 0, 128)
  */
 export function pixelToEeDelta(du: number, dv: number, size: number): { dx: number; dz: number } {
   const span = size - 1;

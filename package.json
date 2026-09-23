@@ -1,6 +1,6 @@
 {
   "name": "vsarena",
-  "version": "0.6.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Browser stacking work-cell for embodied (VLA) agents.",
   "scripts": {

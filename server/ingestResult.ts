@@ -1,14 +1,12 @@
-// Assumption: Next app is reachable from this process (local: http://127.0.0.1:3000).
+// POST scored results to the Next ingest endpoint (VSARENA_APP_URL, default localhost:3000).
 
-import type { ControlArm } from "../lib/eval/control";
 import type { ResultMessage } from "../lib/harness/protocol";
 
-/**
- * POST a harness-scored result to the Next ingest endpoint.
- *
- * @example await ingestOfficialResult({ agent: "my-bot", result })
- */
-export async function ingestOfficialResult(agent: string, result: ResultMessage): Promise<void> {
+export async function ingestOfficialResult(
+  agent: string,
+  result: ResultMessage,
+  options: { ownerId?: string | null } = {},
+): Promise<void> {
   const secret = (process.env.HARNESS_INGEST_SECRET ?? "").trim();
   const base = (process.env.VSARENA_APP_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
   if (secret.length < 16) {
@@ -17,6 +15,10 @@ export async function ingestOfficialResult(agent: string, result: ResultMessage)
   }
   if (!result.digest || !result.signature || !result.provenance || !result.failure) {
     console.error("[vsarena-harness] ingest skipped — result is missing digest/signature/provenance");
+    return;
+  }
+  if (!options.ownerId) {
+    console.error("[vsarena-harness] ingest skipped — owner_id missing (agent ownership required)");
     return;
   }
   try {
@@ -39,12 +41,14 @@ export async function ingestOfficialResult(agent: string, result: ResultMessage)
           },
         },
         agent,
+        owner_id: options.ownerId,
         failure: result.failure,
         provenance: result.provenance,
-        control: (result.control ?? null) as ControlArm | null,
-        sampler_seed: (result.provenance as { sampler_seed?: number }).sampler_seed,
+        control: result.control ?? null,
+        sampler_seed: result.provenance.sampler_seed,
         digest: result.digest,
         signature: result.signature,
+        replay: result.replay ?? null,
       }),
     });
     if (!res.ok) {

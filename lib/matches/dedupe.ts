@@ -14,8 +14,6 @@ function matchCount(row: AgentRowLike): number {
 
 /**
  * Keep the row with the most official matches; tie-break oldest `created_at`, then lowest id.
- *
- * @example dedupeAgentRows([a, aDuplicate]) // [a]
  */
 export function dedupeAgentRows<T extends AgentRowLike>(rows: T[]): T[] {
   const byName = new Map<string, T>();

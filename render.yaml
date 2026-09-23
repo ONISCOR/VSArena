@@ -22,3 +22,10 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      # Ed25519 for signed run manifests (private on harness; public also on Vercel).
+      - key: VSARENA_RESULTS_ED25519_PRIVATE
+        sync: false
+      - key: VSARENA_RESULTS_ED25519_PUBLIC
+        sync: false
+      - key: VSARENA_HELD_OUT_JSON
+        sync: false

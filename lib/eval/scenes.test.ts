@@ -9,8 +9,10 @@ import {
 import { shouldRunLiveControl } from "@/lib/eval/control";
 
 describe("scene construction", () => {
+  const inRepo = { VSARENA_ALLOW_INREPO_HELD_OUT: "1" };
+
   it("is deterministic for the same match id", () => {
-    const env = { NODE_ENV: "production" };
+    const env = { NODE_ENV: "production", ...inRepo };
     const a = resolveScene({ matchId: "match-repeat", env });
     const b = resolveScene({ matchId: "match-repeat", env });
     expect(a.hash).toBe(b.hash);
@@ -21,7 +23,10 @@ describe("scene construction", () => {
 
   it("keeps Studio/public layouts different from held-out ELO layouts", () => {
     const pub = resolveScene({ matchId: "m1", env: { VSARENA_SCENE_SET: "public" } });
-    const held = resolveScene({ matchId: "m1", env: { VSARENA_SCENE_SET: "held_out" } });
+    const held = resolveScene({
+      matchId: "m1",
+      env: { VSARENA_SCENE_SET: "held_out", ...inRepo },
+    });
     expect(pub.set).toBe("public");
     expect(pub.id).toBe("public.canonical");
     expect(held.set).toBe("held_out");
@@ -32,7 +37,15 @@ describe("scene construction", () => {
 
   it("defaults local harness to public and production to held_out", () => {
     expect(resolveScene({ matchId: "m", env: { NODE_ENV: "development" } }).set).toBe("public");
-    expect(resolveScene({ matchId: "m", env: { NODE_ENV: "production" } }).set).toBe("held_out");
+    expect(
+      resolveScene({ matchId: "m", env: { NODE_ENV: "production", ...inRepo } }).set,
+    ).toBe("held_out");
+  });
+
+  it("requires private held-out JSON in production unless explicitly allowed", () => {
+    expect(() =>
+      resolveScene({ matchId: "m", env: { NODE_ENV: "production", VSARENA_SCENE_SET: "held_out" } }),
+    ).toThrow(/VSARENA_HELD_OUT_JSON/);
   });
 
   it("pins held-out layouts to the eval-window sampler seed, not match_id", () => {
@@ -41,13 +54,13 @@ describe("scene construction", () => {
       matchId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       samplerSeed: seed,
       arm: "scored",
-      env: { VSARENA_SCENE_SET: "held_out" },
+      env: { VSARENA_SCENE_SET: "held_out", ...inRepo },
     });
     const b = resolveScene({
       matchId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       samplerSeed: seed,
       arm: "scored",
-      env: { VSARENA_SCENE_SET: "held_out" },
+      env: { VSARENA_SCENE_SET: "held_out", ...inRepo },
     });
     expect(a.seed).toBe(seed);
     expect(a.hash).toBe(b.hash);
@@ -60,13 +73,13 @@ describe("scene construction", () => {
       matchId: "m-control",
       samplerSeed: seed,
       arm: "control",
-      env: { NODE_ENV: "production", VSARENA_SCENE_SET: "held_out" },
+      env: { NODE_ENV: "production", VSARENA_SCENE_SET: "held_out", ...inRepo },
     });
     const scored = resolveScene({
       matchId: "m-control",
       samplerSeed: seed,
       arm: "scored",
-      env: { NODE_ENV: "production" },
+      env: { NODE_ENV: "production", ...inRepo },
     });
     expect(control.id).toBe("public.canonical");
     expect(control.seed).toBe(0);

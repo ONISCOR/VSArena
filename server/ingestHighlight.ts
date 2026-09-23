@@ -4,8 +4,6 @@ import type { HighlightRun } from "../lib/eval/highlights";
 
 /**
  * POST a scored-run highlight. Served to Studio live only after the eval week rotates.
- *
- * @example await ingestHighlight(run)
  */
 export async function ingestHighlight(run: HighlightRun): Promise<void> {
   const secret = (process.env.HARNESS_INGEST_SECRET ?? "").trim();
@@ -32,8 +30,6 @@ export async function ingestHighlight(run: HighlightRun): Promise<void> {
 
 /**
  * Previous-week reel from the Next app. Empty until the first rotation.
- *
- * @example await fetchPublicHighlights()
  */
 export async function fetchPublicHighlights(): Promise<HighlightRun[]> {
   const base = (process.env.VSARENA_APP_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");

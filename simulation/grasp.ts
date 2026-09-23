@@ -9,8 +9,6 @@ import type { Quat, Vec3 } from "./types";
 /**
  * True when a block center sits in the pinch box at the gripper TCP.
  * Local X = along the fingers, Y = gripper up, Z = between the pads.
- *
- * @example inGraspVolume(tcp, rot, blockPos)
  */
 export function inGraspVolume(tcp: Vec3, tcpRot: Quat, block: Vec3): boolean {
   const rel = quatRotateVec(quatConjugate(tcpRot), vecSub(block, tcp));
@@ -19,8 +17,6 @@ export function inGraspVolume(tcp: Vec3, tcpRot: Quat, block: Vec3): boolean {
 
 /**
  * Nearest block inside the pinch volume (sphere pre-filter, then local box).
- *
- * @example findGraspTarget(tcp, rot, [{ id: "block_cyan", position: [0.3, 0.74, 0] }])
  */
 export function findGraspTarget(
   tcp: Vec3,
@@ -41,8 +37,6 @@ export function findGraspTarget(
 
 /**
  * Weld a cube to the pinch point by making it kinematic at the TCP (upright).
- *
- * @example attachBlockToGripper(body, tcp)
  */
 export function attachBlockToGripper(body: RigidBody, tcp: Vec3): void {
   body.setLinvel({ x: 0, y: 0, z: 0 }, true);
@@ -54,8 +48,6 @@ export function attachBlockToGripper(body: RigidBody, tcp: Vec3): void {
 
 /**
  * Keep a held kinematic cube glued to the TCP for the next Rapier step.
- *
- * @example followGripper(body, tcp)
  */
 export function followGripper(body: RigidBody, tcp: Vec3): void {
   body.setNextKinematicTranslation({ x: tcp[0], y: tcp[1], z: tcp[2] });
@@ -64,8 +56,6 @@ export function followGripper(body: RigidBody, tcp: Vec3): void {
 
 /**
  * Drop a held cube back to a dynamic rigid body at the current pose.
- *
- * @example releaseHeldBlock(body)
  */
 export function releaseHeldBlock(body: RigidBody): void {
   const t = body.translation();

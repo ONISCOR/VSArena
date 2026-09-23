@@ -23,8 +23,6 @@ export interface ControlArm {
 
 /**
  * Fail flag for rate math. Incomplete stacks and aborted matches both count.
- *
- * @example armFailed(0, "completed") // true
  */
 export function armFailed(completion: number, status: "completed" | "failed"): boolean {
   return status === "failed" || completion < 1;
@@ -32,8 +30,6 @@ export function armFailed(completion: number, status: "completed" | "failed"): b
 
 /**
  * Fail rate in [0, 1], or null when the series is empty.
- *
- * @example failRate([true, false]) // 0.5
  */
 export function failRate(flags: boolean[]): number | null {
   if (flags.length === 0) return null;
@@ -42,8 +38,6 @@ export function failRate(flags: boolean[]): number | null {
 
 /**
  * Board cell: benign fail rate → scored fail rate.
- *
- * @example formatControlPair(0.04, 0.06) // "4% → 6%"
  */
 export function formatControlPair(control: number | null, scored: number | null): string | null {
   if (control === null && scored === null) return null;
@@ -54,8 +48,6 @@ export function formatControlPair(control: number | null, scored: number | null)
 
 /**
  * Copy scored scores into the control slot when we did not run a second episode.
- *
- * @example degenerateControl(scored, publicHash)
  */
 export function degenerateControl(input: {
   status: "completed" | "failed";
@@ -83,8 +75,6 @@ export function degenerateControl(input: {
 /**
  * Skip the live control episode when the scored set is already the benign layout,
  * or when the operator sets VSARENA_SKIP_CONTROL=1 (local debug only).
- *
- * @example shouldRunLiveControl("held_out", env)
  */
 export function shouldRunLiveControl(
   scoredSet: "public" | "held_out",

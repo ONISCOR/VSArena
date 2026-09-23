@@ -9,8 +9,6 @@ export interface EvalWindowSeed {
 
 /**
  * Canonical id for a leaderboard submission (agent display name).
- *
- * @example canonicalSubmissionId("Ada Stack") // "ada-stack"
  */
 export function canonicalSubmissionId(name: string): string {
   return (
@@ -24,8 +22,6 @@ export function canonicalSubmissionId(name: string): string {
 
 /**
  * UTC ISO week id, e.g. "2026-W37". Thursday-based, week padded to two digits.
- *
- * @example evalWindowId(new Date("2026-09-10T12:00:00.000Z"))
  */
 export function evalWindowId(at: Date = new Date()): string {
   const date = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()));
@@ -39,8 +35,6 @@ export function evalWindowId(at: Date = new Date()): string {
 
 /**
  * Previous ISO week. Highlights may reveal that window; the current one stays hidden.
- *
- * @example previousEvalWindowId(new Date("2026-09-10T12:00:00.000Z"))
  */
 export function previousEvalWindowId(at: Date = new Date()): string {
   const shifted = new Date(at.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -49,8 +43,6 @@ export function previousEvalWindowId(at: Date = new Date()): string {
 
 /**
  * True when a stored highlight window is already retired (safe to stream).
- *
- * @example isRetiredEvalWindow("2026-W36", new Date("2026-09-10T12:00:00.000Z"))
  */
 export function isRetiredEvalWindow(window: string, at: Date = new Date()): boolean {
   return window < evalWindowId(at);
@@ -58,8 +50,6 @@ export function isRetiredEvalWindow(window: string, at: Date = new Date()): bool
 
 /**
  * Fixed uint32 seed for this eval week. Same week → same official layouts for every agent.
- *
- * @example officialSamplerSeed(new Date("2026-09-10T12:00:00.000Z"))
  */
 export function officialSamplerSeed(at: Date = new Date()): EvalWindowSeed {
   const window = evalWindowId(at);
@@ -68,8 +58,6 @@ export function officialSamplerSeed(at: Date = new Date()): EvalWindowSeed {
 
 /**
  * Legacy per-name seed. Not used for official ELO (name was choosable).
- *
- * @example samplerSeedFromAgent("Baseline-IK")
  */
 export function samplerSeedFromAgent(name: string): number {
   return seedFromId(`submit:${canonicalSubmissionId(name)}`);
@@ -77,8 +65,6 @@ export function samplerSeedFromAgent(name: string): number {
 
 /**
  * Format a sampler seed the way the board used to show it (hex).
- *
- * @example formatSamplerSeed(255) // "000000ff"
  */
 export function formatSamplerSeed(seed: number): string {
   return (seed >>> 0).toString(16).padStart(8, "0");

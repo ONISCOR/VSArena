@@ -4,13 +4,13 @@ import { create } from "zustand";
 import { DEFAULT_JOINTS } from "@/simulation/constants";
 import type { JointState, SimEvent, Vec3 } from "@/simulation/types";
 import type { ResultMessage } from "@/lib/harness/protocol";
+import type { PlayTrick } from "@/lib/playground";
 
-const MAX_LOGS = 8;
 const MAX_METRICS = 80;
 const MAX_TRAIL = 48;
 
 export type MatchStatus = "idle" | "running" | "completed" | "failed";
-export type CameraView = "orbit" | "table" | "top" | "side";
+export type CameraView = "orbit" | "table" | "top" | "side" | "play";
 
 export interface MetricSample {
   tick: number;
@@ -40,12 +40,11 @@ interface HudState {
   showColliders: boolean;
   showGrid: boolean;
   showTrails: boolean;
-  showHeatmap: boolean;
   cameraView: CameraView;
-  logs: string[];
   matchStatus: MatchStatus;
   matchResult: ResultMessage | null;
-  matchRequest: "idle" | "start-baseline" | "start-colorseek" | "abort" | "reset";
+  matchRequest: "idle" | "start-baseline" | "start-colorseek" | "start-trick" | "abort" | "reset";
+  playTrick: PlayTrick | null;
   setReady: (ready: boolean) => void;
   setError: (error: string | null) => void;
   syncTelemetry: (snapshot: {
@@ -60,30 +59,16 @@ interface HudState {
   ingestEvents: (events: SimEvent[]) => void;
   requestBaselineMatch: () => void;
   requestColorSeekMatch: () => void;
+  requestPlayTrick: (trick: PlayTrick) => void;
   abortMatch: () => void;
   requestTableReset: () => void;
   consumeMatchRequest: () => void;
-  setMatchRunning: (label?: string) => void;
+  setMatchRunning: () => void;
   finishMatch: (result: ResultMessage) => void;
-  pushLog: (line: string) => void;
   toggleColliders: () => void;
   toggleGrid: () => void;
   toggleTrails: () => void;
-  toggleHeatmap: () => void;
   setCameraView: (view: CameraView) => void;
-}
-
-function formatEvent(event: SimEvent, tick: number): string {
-  switch (event.type) {
-    case "grasp":
-      return `Step ${tick}: grasp ${event.blockId}`;
-    case "release":
-      return `Step ${tick}: release ${event.blockId}`;
-    case "reset":
-      return `Step ${tick}: scene reset`;
-    case "panic":
-      return `Step ${tick}: physics panic — ${event.message}`;
-  }
 }
 
 function jointDelta(prev: JointState, next: JointState): number {
@@ -111,12 +96,11 @@ export const useHudStore = create<HudState>((set) => ({
   showColliders: false,
   showGrid: false,
   showTrails: false,
-  showHeatmap: false,
   cameraView: "orbit",
-  logs: ["Teleop ready"],
   matchStatus: "idle",
   matchResult: null,
   matchRequest: "idle",
+  playTrick: null,
   setReady: (ready) => set({ ready }),
   setError: (error) => set({ error, ready: false }),
   syncTelemetry: (snapshot) =>
@@ -148,12 +132,9 @@ export const useHudStore = create<HudState>((set) => ({
     if (events.length === 0) return;
     set((state) => {
       const reset = events.some((event) => event.type === "reset" || event.type === "panic");
-      const next = [...state.logs];
-      for (const event of events) {
-        next.push(formatEvent(event, state.tick));
-      }
+      const panic = events.find((event) => event.type === "panic");
       return {
-        logs: next.slice(-MAX_LOGS),
+        error: panic ? panic.message : state.error,
         tcpTrail: reset ? [] : state.tcpTrail,
         metrics: reset ? [] : state.metrics,
       };
@@ -162,32 +143,20 @@ export const useHudStore = create<HudState>((set) => ({
   toggleColliders: () => set((s) => ({ showColliders: !s.showColliders })),
   toggleGrid: () => set((s) => ({ showGrid: !s.showGrid })),
   toggleTrails: () => set((s) => ({ showTrails: !s.showTrails })),
-  toggleHeatmap: () => set((s) => ({ showHeatmap: !s.showHeatmap })),
   setCameraView: (cameraView) => set({ cameraView }),
   requestBaselineMatch: () =>
-    set({ matchRequest: "start-baseline", matchStatus: "idle", matchResult: null }),
+    set({ matchRequest: "start-baseline", playTrick: null, matchStatus: "idle", matchResult: null }),
   requestColorSeekMatch: () =>
-    set({ matchRequest: "start-colorseek", matchStatus: "idle", matchResult: null }),
+    set({ matchRequest: "start-colorseek", playTrick: null, matchStatus: "idle", matchResult: null }),
+  requestPlayTrick: (playTrick) =>
+    set({ matchRequest: "start-trick", playTrick, matchStatus: "idle", matchResult: null }),
   abortMatch: () => set({ matchRequest: "abort" }),
   requestTableReset: () => set({ matchRequest: "reset" }),
   consumeMatchRequest: () => set({ matchRequest: "idle" }),
-  setMatchRunning: (label = "Baseline-IK match started") =>
-    set({
-      matchStatus: "running",
-      matchResult: null,
-      logs: [label],
-    }),
+  setMatchRunning: () => set({ matchStatus: "running", matchResult: null }),
   finishMatch: (result) =>
-    set((state) => ({
+    set({
       matchStatus: result.status === "completed" ? "completed" : "failed",
       matchResult: result,
-      logs: [
-        ...state.logs,
-        `Result spatial=${result.scores.spatial_accuracy.toFixed(2)} complete=${result.scores.task_completion_score.toFixed(2)}`,
-      ].slice(-MAX_LOGS),
-    })),
-  pushLog: (line) =>
-    set((state) => ({
-      logs: [...state.logs, line].slice(-MAX_LOGS),
-    })),
+    }),
 }));

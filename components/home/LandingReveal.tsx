@@ -11,8 +11,6 @@ interface LandingRevealProps {
 
 /**
  * Fade-up on scroll. Respects `prefers-reduced-motion`.
- *
- * @example <LandingReveal delayMs={80}>…</LandingReveal>
  */
 export function LandingReveal({ children, className, delayMs = 0 }: LandingRevealProps) {
   const ref = useRef<HTMLDivElement>(null);

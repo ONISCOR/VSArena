@@ -15,8 +15,6 @@ export { DEMO_FORMAT, DEMO_HZ, DEMO_MAX_FRAMES };
 
 /**
  * One VLA training frame: same observation as the harness, plus the teleop/agent motion.
- *
- * @example captureDemoFrame(snap, null, 0).action.ee_delta.dx === 0
  */
 export function captureDemoFrame(
   snapshot: SimulationSnapshot,
@@ -50,8 +48,6 @@ export function captureDemoFrame(
 
 /**
  * Fixed-rate VLA demo buffer. Call `tick` from the physics loop; do not drive physics from here.
- *
- * @example const rec = new DemoRecorder(); rec.start(); rec.tick(0.2, snap)
  */
 export class DemoRecorder {
   private frames: DemoFrame[] = [];
@@ -113,8 +109,6 @@ export class DemoRecorder {
 
 /**
  * JSON payload for download / Python `load_episode`.
- *
- * @example JSON.parse(serializeDemo(rec.stop())).format
  */
 export function serializeDemo(episode: DemoEpisode): string {
   return `${JSON.stringify(episode)}\n`;

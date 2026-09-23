@@ -23,8 +23,6 @@ function isMissingRelation(error: { message?: string; code?: string } | null): b
 
 /**
  * Upsert a scored-run highlight. Current-week rows stay stored; GET will not serve them yet.
- *
- * @example await recordHighlight(run)
  */
 export async function recordHighlight(run: HighlightRun): Promise<void> {
   const sameWindow = memory.filter((row) => row.eval_window === run.eval_window);
@@ -91,8 +89,6 @@ function rowToRun(row: Record<string, unknown>): HighlightRun | null {
 
 /**
  * Public reel for Studio live. Never includes the current eval window.
- *
- * @example await listPublicHighlights()
  */
 export async function listPublicHighlights(at: Date = new Date()): Promise<HighlightFeed> {
   if (hasServiceRole()) {

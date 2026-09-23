@@ -73,6 +73,14 @@ describe("failure taxonomy", () => {
         recoverable: true,
       }),
     ).toBe(false);
+    expect(
+      shouldIngestOfficialResult({
+        code: "protocol.invalid_action",
+        domain: "protocol",
+        message: "",
+        recoverable: false,
+      }),
+    ).toBe(false);
   });
 
   it("gives VLA a tighter timeout budget than state", () => {

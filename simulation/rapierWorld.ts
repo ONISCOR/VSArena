@@ -77,8 +77,6 @@ function lerpArm(a: ArmSnapshot, b: ArmSnapshot, alpha: number): ArmSnapshot {
 
 /**
  * Client-side Rapier world: kinematic 5-DOF arm + dynamic blocks + kinematic grasp.
- *
- * @example const sim = await ArenaSimulation.create(); sim.step(1/60, input);
  */
 export class ArenaSimulation {
   private world: World;
@@ -105,8 +103,6 @@ export class ArenaSimulation {
 
   /**
    * Load Rapier WASM then construct a fresh arena.
-   *
-   * @example const sim = await ArenaSimulation.create();
    */
   static async create(options?: { spawns?: readonly BlockSpawnDesc[] }): Promise<ArenaSimulation> {
     await RAPIER.init();
@@ -125,8 +121,6 @@ export class ArenaSimulation {
 
   /**
    * Advance physics with a fixed 60 Hz step. Returns interpolation alpha in [0, 1].
-   *
-   * @example const alpha = sim.step(deltaSeconds, inputBuffer)
    */
   step(dtSeconds: number, input: InputBuffer): number {
     const clamped = Math.min(Math.max(dtSeconds, 0), 0.05);
@@ -169,8 +163,6 @@ export class ArenaSimulation {
 
   /**
    * Drive the arm from a decoded agent command. Null returns control to the keyboard.
-   *
-   * @example sim.setAgentCommand({ joints, gripperClosed: true })
    */
   setAgentCommand(command: AgentCommand | null): void {
     this.agentCommand = command;
@@ -317,8 +309,6 @@ export class ArenaSimulation {
 
   /**
    * Glues the held cube to the TCP so lift/carry cannot leave it on the table.
-   *
-   * @example this.syncHeldBlock(arm.tcp.position)
    */
   private syncHeldBlock(tcp: [number, number, number]): void {
     if (!this.graspedBlockId) return;
@@ -329,8 +319,6 @@ export class ArenaSimulation {
 
   /**
    * Held cubes skip arm contacts so the grasp joint is not fighting the solver.
-   *
-   * @example this.setBlockArmCollision(body, false)
    */
   private setBlockArmCollision(body: RigidBody, collideWithArm: boolean): void {
     const groups = collideWithArm ? GROUPS_BLOCK : GROUPS_BLOCK_HELD;
@@ -347,8 +335,6 @@ export class ArenaSimulation {
 
   /**
    * Keep Rapier jaw colliders aligned with the visual fingers (TCP-local).
-   *
-   * @example this.syncJawColliders()
    */
   private syncJawColliders(): void {
     const sep = this.jawSeparation();

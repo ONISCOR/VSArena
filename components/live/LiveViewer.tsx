@@ -1,20 +1,17 @@
 "use client";
 
-/** Read-only 3D mirror of the hosted harness. Assumption: no Rapier here — poses from /spectate. */
+/** Read-only 3D mirror of the hosted harness (poses from /spectate). */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, ContactShadows } from "@react-three/drei";
-import { StudioEnv } from "@/components/simulation/StudioEnv";
+import { OrbitControls } from "@react-three/drei";
+import { IndustrialEnv, IndustrialHall, IndustrialLook } from "@/components/simulation/set-v2";
+import { SPECTATE_REST, SpectateWorkcell } from "@/components/simulation/SpectateWorkcell";
 import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
 import Link from "next/link";
-import { ArenaSet } from "@/components/simulation/ArenaSet";
-import { Blocks } from "@/components/simulation/Blocks";
-import { RobotArm } from "@/components/simulation/RobotArm";
-import { Table } from "@/components/simulation/Table";
-import { TargetZone } from "@/components/simulation/TargetZone";
 import type { SpectateFrameMessage, SpectateKind, SpectateMessage } from "@/lib/harness/spectate";
-import { harnessHealthUrl, harnessSpectateUrl } from "@/lib/live/harnessWs";
+import { harnessSpectateUrl } from "@/lib/live/harnessWs";
+import { wakeOfficialHarness } from "@/lib/live/wakeHarness";
 import { TABLE_TOP_Y } from "@/simulation/constants";
 import type { BlockState, JointState } from "@/simulation/types";
 import { cn } from "@/lib/utils";
@@ -29,27 +26,17 @@ interface ResultBanner {
   task: number;
 }
 
-const ZERO_JOINTS: JointState = {
-  baseYaw: 0,
-  shoulderPitch: 0.6,
-  elbowPitch: -1.2,
-  wristPitch: -0.4,
-  gripper: 0,
-};
-
 /** Closer table rig — fills the frame like Studio, not a distant vignette. */
 const CAM: [number, number, number] = [1.15, 1.05, 1.05];
 const CAM_TARGET: [number, number, number] = [0.08, TABLE_TOP_Y + 0.1, 0];
 
 /**
  * Full-bleed spectator stage: HUD overlays the canvas (no dead black band).
- *
- * @example <LiveViewer onCollapse={() => router.push("/simulation")} />
  */
 export function LiveViewer({ onCollapse }: { onCollapse?: () => void }) {
   const { m } = useI18n();
   const copy = m.liveView;
-  const jointsRef = useRef<JointState>({ ...ZERO_JOINTS });
+  const jointsRef = useRef<JointState>({ ...SPECTATE_REST });
   const blocksRef = useRef<BlockState[]>([]);
   const [status, setStatus] = useState<LiveStatus>("connecting");
   const [feed, setFeed] = useState<SpectateKind | null>(null);
@@ -154,8 +141,10 @@ export function LiveViewer({ onCollapse }: { onCollapse?: () => void }) {
       };
     };
 
-    void fetch(harnessHealthUrl()).catch(() => undefined);
-    connect();
+    void (async () => {
+      await wakeOfficialHarness({ timeoutMs: 45_000 });
+      if (!cancelled) connect();
+    })();
 
     return () => {
       cancelled = true;
@@ -198,56 +187,24 @@ export function LiveViewer({ onCollapse }: { onCollapse?: () => void }) {
           shadows
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
-          camera={{ position: CAM, fov: 36, near: 0.04, far: 18 }}
+          camera={{ position: CAM, fov: 34, near: 0.04, far: 42 }}
           onCreated={({ gl }) => {
-            gl.setClearColor("#12151c", 1);
             gl.toneMapping = ACESFilmicToneMapping;
-            gl.toneMappingExposure = 1.35;
+            gl.toneMappingExposure = 1.22;
             gl.outputColorSpace = SRGBColorSpace;
           }}
         >
-          <fog attach="fog" args={["#12151c", 8, 18]} />
-          <StudioEnv />
-          <hemisphereLight args={["#c5d0dc", "#1a1e26", 0.62]} />
-          <ambientLight intensity={0.42} />
-          <spotLight
-            position={[1.8, 3.4, 1.7]}
-            angle={0.62}
-            penumbra={0.55}
-            intensity={4.2}
-            decay={0}
-            color="#fff6ee"
-            castShadow
-            shadow-mapSize-width={1024}
-            shadow-mapSize-height={1024}
-            shadow-bias={-0.0002}
-          />
-          <spotLight
-            position={[-2.0, 2.8, 1.2]}
-            angle={0.75}
-            penumbra={0.8}
-            intensity={1.8}
-            decay={0}
-            color="#b9d4ef"
-          />
-          <pointLight position={[0.15, 2.15, 0.1]} intensity={1.6} decay={0} color="#e8eef5" />
-          <ArenaSet />
-          <Table />
-          <TargetZone />
-          {ready ? (
-            <>
-              <RobotArm jointsRef={jointsRef} />
-              <Blocks blocksRef={blocksRef} />
-            </>
-          ) : null}
-          <ContactShadows position={[0, 0.002, 0]} opacity={0.32} scale={8} blur={2.4} far={2.6} />
+          <IndustrialEnv />
+          <IndustrialLook />
+          <IndustrialHall />
+          <SpectateWorkcell jointsRef={jointsRef} blocksRef={blocksRef} ready={ready} />
           <OrbitControls
             makeDefault
             enableDamping
             dampingFactor={0.08}
             target={CAM_TARGET}
             minDistance={0.85}
-            maxDistance={3.2}
+            maxDistance={5.2}
             minPolarAngle={0.2}
             maxPolarAngle={Math.PI / 2 - 0.1}
           />

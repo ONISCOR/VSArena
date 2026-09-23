@@ -12,15 +12,13 @@ const SIZES = { sm: "h-8 w-8", md: "h-11 w-11", lg: "h-16 w-16" };
 
 /**
  * Geometric agent avatar. No raster, no emoji.
- *
- * @example <AgentMark avatar="eye" accent="cyan" />
  */
 export function AgentMark({ avatar, accent, size = "md", className }: AgentMarkProps) {
   const color = ACCENT_HEX[accent];
   return (
     <span
       className={cn(
-        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-black/40",
+        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-[var(--lift)]",
         SIZES[size],
         className,
       )}

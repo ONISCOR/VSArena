@@ -25,8 +25,6 @@ export interface SnapshotToStateOptions {
 
 /**
  * Snapshot → on-wire state. VLA mode hides cube poses and attaches an RGB work-cell image.
- *
- * @example snapshotToState(snap, "uuid", 12, { mode: "vla" })
  */
 export function snapshotToState(
   snapshot: SimulationSnapshot,
@@ -79,8 +77,6 @@ export function snapshotToState(
 
 /**
  * Decode joint_targets into our JointState fields (missing keys stay as current).
- *
- * @example mergeJointTargets(joints, action.joint_targets)
  */
 export function mergeJointTargets(
   current: JointState,
@@ -99,8 +95,6 @@ export function mergeJointTargets(
 
 /**
  * Map an on-wire action onto joint servos. `ee_delta` (metres from current TCP) wins over joint_targets.
- *
- * @example applyAgentAction(snap, { gripper_state: "open", ee_delta: { dx: 0.02, dy: 0, dz: 0 } })
  */
 export function applyAgentAction(snapshot: SimulationSnapshot, action: ActionMessage["action"]): JointState {
   const gripper = action.gripper_state === "closed" ? 1 : 0;

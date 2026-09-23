@@ -21,8 +21,6 @@ function pose(position: Vec3, rotation: [number, number, number, number]): Pose 
  *
  * Chain: yaw (Y) → shoulder pitch (Z) → elbow pitch (Z) → wrist pitch (Z) → gripper opening.
  * TCP is the mid-finger pinch point, not the palm.
- *
- * @example forwardKinematics({ baseYaw: 0, shoulderPitch: 0.6, elbowPitch: -1.2, wristPitch: -0.4, gripper: 0 })
  */
 export function forwardKinematics(joints: JointState, mount: Vec3 = ARM_MOUNT): ArmSnapshot {
   const pedestal = pose(

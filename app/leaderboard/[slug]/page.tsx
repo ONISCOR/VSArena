@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AgentDetailView } from "@/components/dashboard/AgentDetailView";
-import { getAgent, listMatchesForAgent } from "@/lib/matches/store";
+import { getAgent, listLeaderboard, listMatchesForAgent } from "@/lib/matches/store";
 import { pageMetadata } from "@/lib/seo";
 import { dict, fill } from "@/lib/i18n/messages";
 import { getRequestLocale } from "@/lib/i18n/server";
@@ -14,8 +14,6 @@ interface AgentPageProps {
 
 /**
  * Per-agent OG title so a tweeted run unfurls with the policy name.
- *
- * @example generateMetadata({ params: { slug: "baseline-ik" } })
  */
 export async function generateMetadata({ params }: AgentPageProps): Promise<Metadata> {
   const agent = await getAgent(params.slug);
@@ -31,6 +29,7 @@ export async function generateMetadata({ params }: AgentPageProps): Promise<Meta
 export default async function AgentPage({ params }: AgentPageProps) {
   const agent = await getAgent(params.slug);
   if (!agent) notFound();
-  const history = await listMatchesForAgent(agent.slug);
-  return <AgentDetailView agent={agent} history={history} />;
+  const [history, board] = await Promise.all([listMatchesForAgent(agent.slug), listLeaderboard()]);
+  const rank = board.find((row) => row.slug === agent.slug)?.rank;
+  return <AgentDetailView agent={agent} history={history} rank={rank} />;
 }

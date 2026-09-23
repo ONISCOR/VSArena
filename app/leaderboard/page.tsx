@@ -9,8 +9,6 @@ export const dynamic = "force-dynamic";
 
 /**
  * Localized OG title for the public board.
- *
- * @example generateMetadata()
  */
 export async function generateMetadata(): Promise<Metadata> {
   const b = dict(getRequestLocale()).board;

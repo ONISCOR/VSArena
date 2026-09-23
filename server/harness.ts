@@ -1,5 +1,5 @@
-// Assumption: standalone Node process for live matches. PORT (cloud) or HARNESS_PORT (local, default 8787).
-// Agent socket = judge. /spectate = read-only fan-out for the website (no actions, no ELO writes).
+// Standalone Node process for live matches. PORT (cloud) or HARNESS_PORT (local, default 8787).
+// Agent socket = judge. /spectate = read-only fan-out (no actions, no ELO writes).
 
 import "./loadEnv";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
@@ -25,6 +25,7 @@ import type { ActionMessage, HelloMessage, ObservationMode, ResultMessage } from
 import {
   isSpectatePath,
   shouldBroadcastSpectate,
+  spectateKindForArm,
   snapshotToSpectateFrame,
   type SpectateFrameMessage,
   type SpectateMessage,
@@ -58,13 +59,21 @@ import {
   harnessError,
   matchFailure,
   officialMatchStatus,
+  shouldIngestObservationMode,
   shouldIngestOfficialResult,
   timeoutStrikeBudget,
   type EvalCounters,
   type FailureCode,
 } from "../lib/eval/taxonomy";
+import {
+  OFFICIAL_MATCHES_PER_AGENT_WINDOW,
+  checkAndBumpRateLimit,
+  rateLimitKey,
+} from "../lib/eval/rateLimit";
+import { createMatchQueue } from "../lib/eval/matchQueue";
 import { VLA_ACTION_TIMEOUT_MS, VLA_POLICY_HZ } from "../lib/vision/raster";
 import { verifyHarnessApiKey } from "./verifyApiKey";
+import { resolveOwnedAgent } from "./resolveOwnedAgent";
 import { ingestOfficialResult } from "./ingestResult";
 import { fetchPublicHighlights, ingestHighlight } from "./ingestHighlight";
 
@@ -74,8 +83,11 @@ const VLA_STEP = 1 / VLA_POLICY_HZ;
 /** State track is 20 Hz; fans out at half rate to keep spectate light. */
 const SPECTATE_STATE_EVERY = 2;
 
-/** MVP: one Rapier world at a time on a free VM. */
-let matchBusy = false;
+const matchQueue = createMatchQueue({
+  notify: (socket, payload) => safeSend(socket, payload),
+});
+/** Per-process official match counters: profile + agent + eval window. */
+const officialRateLimits = new Map<string, number>();
 
 const spectators = new Set<WebSocket>();
 let lastSpectateFrame: SpectateFrameMessage | null = null;
@@ -115,8 +127,6 @@ wss.on("connection", (socket, req) => {
 
 /**
  * Health for reverse proxies / cloud probes (+ eval provenance).
- *
- * @example GET /health → { ok: true, busy: false }
  */
 function handleHttp(req: IncomingMessage, res: ServerResponse): void {
   const path = (req.url ?? "/").split("?")[0];
@@ -140,7 +150,8 @@ function handleHttp(req: IncomingMessage, res: ServerResponse): void {
     res.end(
       JSON.stringify({
         ok: true,
-        busy: matchBusy,
+        busy: matchQueue.isBusy(),
+        queue: matchQueue.depth(),
         live,
         spectators: spectators.size,
         eval: {
@@ -208,29 +219,35 @@ function broadcastSpectate(payload: SpectateMessage): void {
 }
 
 async function handleConnection(socket: WebSocket): Promise<void> {
-  if (matchBusy) {
-    safeSend(socket, harnessError("harness.busy", "one live match at a time; retry shortly", true));
+  const acquired = await matchQueue.acquire(socket);
+  if (!acquired) {
     socket.close();
     return;
   }
-
-  const hello = await waitForHello(socket);
-  if (!hello.api_key) {
-    safeSend(socket, harnessError("protocol.api_key_required", "api_key required"));
-    socket.close();
-    return;
-  }
-  if (hello.task && hello.task !== "block_stacking") {
-    safeSend(socket, harnessError("protocol.invalid_task", "MVP only supports task=block_stacking"));
-    socket.close();
-    return;
-  }
-
-  matchBusy = true;
   stopHighlightReel();
   let agentName = "unknown";
+  let ownerId: string | null = null;
 
   try {
+    let hello: HelloMessage;
+    try {
+      hello = await waitForHello(socket);
+    } catch {
+      safeSend(socket, harnessError("protocol.hello_timeout", "hello timeout"));
+      socket.close();
+      return;
+    }
+    if (!hello.api_key) {
+      safeSend(socket, harnessError("protocol.api_key_required", "api_key required"));
+      socket.close();
+      return;
+    }
+    if (hello.task && hello.task !== "block_stacking") {
+      safeSend(socket, harnessError("protocol.invalid_task", "MVP only supports task=block_stacking"));
+      socket.close();
+      return;
+    }
+
     const auth = await verifyHarnessApiKey(hello.api_key);
     if (!auth.ok) {
       const code: FailureCode =
@@ -243,7 +260,15 @@ async function handleConnection(socket: WebSocket): Promise<void> {
     }
 
     const mode: ObservationMode = hello.mode === "state" ? "state" : "vla";
-    agentName = (hello.agent ?? auth.username).trim() || auth.username;
+    const requestedName = (hello.agent ?? auth.username).trim() || auth.username;
+    const owned = await resolveOwnedAgent({ profileId: auth.profileId, agentName: requestedName });
+    if (!owned.ok) {
+      safeSend(socket, harnessError(owned.code, owned.reason));
+      socket.close();
+      return;
+    }
+    agentName = owned.agentName;
+    ownerId = auth.profileId;
     const step = mode === "vla" ? VLA_STEP : STATE_STEP;
     const physSteps = Math.max(1, Math.round(step / FIXED_DT));
     const actionTimeout = latencyBudgetMs(mode);
@@ -252,6 +277,26 @@ async function handleConnection(socket: WebSocket): Promise<void> {
     const matchId = globalThis.crypto.randomUUID();
     const windowSeed = officialSamplerSeed();
     const samplerSeed = windowSeed.seed;
+
+    if (auth.profileId && shouldIngestObservationMode(mode)) {
+      const limit = checkAndBumpRateLimit(
+        officialRateLimits,
+        rateLimitKey(auth.profileId, agentName, windowSeed.window),
+        OFFICIAL_MATCHES_PER_AGENT_WINDOW,
+      );
+      if (!limit.ok) {
+        safeSend(
+          socket,
+          harnessError(
+            "protocol.rate_limited",
+            `official match limit reached for this agent this week (${limit.limit})`,
+            true,
+          ),
+        );
+        socket.close();
+        return;
+      }
+    }
     const scoredScene = resolveScene({ matchId, samplerSeed, arm: "scored" });
     const controlScene = resolveScene({ matchId, samplerSeed, arm: "control" });
     const runControl = shouldRunLiveControl(scoredScene.set);
@@ -368,6 +413,7 @@ async function handleConnection(socket: WebSocket): Promise<void> {
         socket,
         matchId,
         agentName,
+        ownerId,
         mode,
         samplerSeed,
         evalWindow: windowSeed.window,
@@ -380,8 +426,12 @@ async function handleConnection(socket: WebSocket): Promise<void> {
       console.log(`[vsarena-harness] match end agent=${agentName}`);
     }
   } finally {
-    matchBusy = false;
-    void playHighlightReel();
+    const { promoted } = matchQueue.release();
+    if (!promoted) {
+      void playHighlightReel();
+    } else {
+      stopHighlightReel();
+    }
   }
 }
 
@@ -400,6 +450,8 @@ type EpisodeDone = {
   counters: EvalCounters;
   replaySamples: ReplaySample[];
   highlightSamples: ReplaySample[];
+  startedAtMs: number;
+  endedAtMs: number;
 };
 
 type EpisodeOutcome = EpisodeDone | { kind: "disconnected" };
@@ -429,6 +481,7 @@ async function runEpisode(input: {
 }): Promise<EpisodeOutcome> {
   const replaySamples: ReplaySample[] = [];
   const highlightSamples: ReplaySample[] = [];
+  const startedAtMs = Date.now();
   let sim: ArenaSimulation | null = null;
   let spectateCounter = 0;
   const showLive = shouldBroadcastSpectate(input.arm, input.scene.set);
@@ -438,7 +491,7 @@ async function runEpisode(input: {
 
     while (!input.bag.closed && input.socket.readyState === input.socket.OPEN) {
       if (input.bag.counters.invalid_actions >= INVALID_ACTION_BUDGET) {
-        return finishEpisode(sim, tracker, replaySamples, highlightSamples, input, false);
+        return finishEpisode(sim, tracker, replaySamples, highlightSamples, input, false, startedAtMs);
       }
 
       const snapshot = sim.getCurrentSnapshot();
@@ -451,13 +504,13 @@ async function runEpisode(input: {
       const holding = snapshot.graspedBlockId !== null;
       const stacked = taskCompletion(snapshot.blocks, snapshot.graspedBlockId) >= 1 && !holding;
       if (stacked) {
-        return finishEpisode(sim, tracker, replaySamples, highlightSamples, input, false);
+        return finishEpisode(sim, tracker, replaySamples, highlightSamples, input, false, startedAtMs);
       }
       if (input.bag.counters.consecutive_timeouts >= input.timeoutBudget) {
-        return finishEpisode(sim, tracker, replaySamples, highlightSamples, input, false);
+        return finishEpisode(sim, tracker, replaySamples, highlightSamples, input, false, startedAtMs);
       }
       if ((overtime && !holding) || snapshot.tick >= cap + MATCH_GRASP_GRACE_TICKS) {
-        return finishEpisode(sim, tracker, replaySamples, highlightSamples, input, false);
+        return finishEpisode(sim, tracker, replaySamples, highlightSamples, input, false, startedAtMs);
       }
 
       const state = snapshotToState(snapshot, input.matchId, snapshot.tick, { mode: input.mode });
@@ -468,7 +521,7 @@ async function runEpisode(input: {
       if (showLive && emitSpectate) {
         broadcastSpectate(
           snapshotToSpectateFrame(snapshot, input.matchId, input.agentName, input.mode, {
-            kind: "control",
+            kind: spectateKindForArm(input.arm),
             eval_window: input.evalWindow,
           }),
         );
@@ -520,7 +573,9 @@ function finishEpisode(
   highlightSamples: ReplaySample[],
   input: { bag: EpisodeBag; mode: ObservationMode; timeoutBudget: number; arm: "control" | "scored" },
   disconnected: boolean,
+  startedAtMs: number,
 ): EpisodeDone {
+  const endedAtMs = Date.now();
   const snapshot = sim.getCurrentSnapshot();
   maybeRecordReplaySample(replaySamples, snapshot, input.mode);
   if (input.arm === "scored") {
@@ -543,6 +598,8 @@ function finishEpisode(
     counters: { ...input.bag.counters },
     replaySamples,
     highlightSamples,
+    startedAtMs,
+    endedAtMs,
   };
 }
 
@@ -550,6 +607,7 @@ async function publishOfficialResult(input: {
   socket: WebSocket;
   matchId: string;
   agentName: string;
+  ownerId: string | null;
   mode: ObservationMode;
   samplerSeed: number;
   evalWindow: string;
@@ -561,6 +619,8 @@ async function publishOfficialResult(input: {
     mode: input.mode,
     samplerSeed: input.samplerSeed,
     evalWindow: input.evalWindow,
+    startedAtMs: input.scored.startedAtMs,
+    endedAtMs: input.scored.endedAtMs,
     scene: {
       set: input.scene.set,
       id: input.scene.id,
@@ -594,6 +654,8 @@ async function publishOfficialResult(input: {
     scores,
     status: input.scored.status,
     samples: input.scored.replaySamples,
+    startedAtMs: input.scored.startedAtMs,
+    endedAtMs: input.scored.endedAtMs,
   });
 
   const manifest = buildRunManifest({
@@ -615,8 +677,13 @@ async function publishOfficialResult(input: {
     console.warn("[vsarena-harness] Ed25519 private key missing — official ingest will reject");
   }
 
-  if (shouldIngestOfficialResult(input.scored.failure) && result.digest && result.signature) {
-    await ingestOfficialResult(input.agentName, result);
+  if (
+    shouldIngestOfficialResult(input.scored.failure) &&
+    shouldIngestObservationMode(input.mode) &&
+    result.digest &&
+    result.signature
+  ) {
+    await ingestOfficialResult(input.agentName, result, { ownerId: input.ownerId });
     if (input.scored.highlightSamples.length > 0) {
       const highlight: HighlightRun = {
         match_id: input.matchId,
@@ -632,6 +699,13 @@ async function publishOfficialResult(input: {
       };
       await ingestHighlight(highlight);
     }
+  } else if (
+    shouldIngestOfficialResult(input.scored.failure) &&
+    !shouldIngestObservationMode(input.mode)
+  ) {
+    console.log(
+      `[vsarena-harness] skip ingest mode=state agent=${input.agentName} (state track is debug-only)`,
+    );
   }
   safeSend(input.socket, result);
   broadcastSpectate({
@@ -685,22 +759,22 @@ function stopHighlightReel(): void {
 async function playHighlightReel(): Promise<void> {
   const token = ++reelToken;
   const runs = (await fetchPublicHighlights()).filter((run) => isRetiredEvalWindow(run.eval_window));
-  if (token !== reelToken || matchBusy) return;
+  if (token !== reelToken || matchQueue.isBusy()) return;
   if (runs.length === 0) {
     broadcastSpectate({ type: "spectate_idle", busy: false });
     return;
   }
   let index = 0;
-  while (token === reelToken && !matchBusy) {
+  while (token === reelToken && !matchQueue.isBusy()) {
     const run = runs[index % runs.length];
     if (!run || run.samples.length === 0) break;
     for (let i = 0; i < run.samples.length; i += 1) {
-      if (token !== reelToken || matchBusy) return;
+      if (token !== reelToken || matchQueue.isBusy()) return;
       broadcastSpectate(highlightSampleToFrame(run, run.samples[i]));
       const next = run.samples[i + 1];
       await sleep(next ? highlightDelayMs(run.samples[i].tick, next.tick) : 600);
     }
-    if (token !== reelToken || matchBusy) return;
+    if (token !== reelToken || matchQueue.isBusy()) return;
     broadcastSpectate(highlightResultMessage(run));
     await sleep(2200);
     index += 1;

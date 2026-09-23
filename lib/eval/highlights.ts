@@ -1,9 +1,9 @@
-/** Weekly highlight reel. Assumption: only retired eval windows may be streamed. */
+/** Weekly highlight reel — only retired eval windows may be streamed. */
 
 import { isRetiredEvalWindow, previousEvalWindowId } from "@/lib/eval/sampler";
 import type { ObservationMode } from "@/lib/harness/protocol";
 import type { SpectateFrameMessage, SpectateResultMessage } from "@/lib/harness/spectate";
-import { snapshotToReplaySample, type ReplaySample } from "@/lib/eval/replay";
+import { recordSparseSample, type ReplaySample } from "@/lib/eval/replay";
 import type { SimulationSnapshot } from "@/simulation/types";
 
 export const HIGHLIGHT_MAX_PER_WINDOW = 8;
@@ -36,36 +36,21 @@ export interface HighlightFeed {
   runs: HighlightRun[];
 }
 
-/**
- * Keep a denser privileged trail so a retired match can be played back in full.
- *
- * @example maybeRecordHighlightSample(samples, snap, "vla")
- */
 export function maybeRecordHighlightSample(
   samples: ReplaySample[],
   snapshot: SimulationSnapshot,
   mode: ObservationMode,
 ): void {
-  if (samples.length >= HIGHLIGHT_MAX_SAMPLES) return;
-  const stride = mode === "vla" ? HIGHLIGHT_STRIDE_VLA : HIGHLIGHT_STRIDE_STATE;
-  if (snapshot.tick !== 0 && snapshot.tick % stride !== 0 && samples.length > 0) return;
-  samples.push(snapshotToReplaySample(snapshot));
+  recordSparseSample(samples, snapshot, {
+    max: HIGHLIGHT_MAX_SAMPLES,
+    stride: mode === "vla" ? HIGHLIGHT_STRIDE_VLA : HIGHLIGHT_STRIDE_STATE,
+  });
 }
 
-/**
- * Rank key: stack first, then spatial accuracy.
- *
- * @example highlightRank(run)
- */
 export function highlightRank(run: HighlightRun): number {
   return run.scores.task_completion_score * 1_000 + run.scores.spatial_accuracy;
 }
 
-/**
- * Keep the best N runs in a window. Same match_id replaces the previous row.
- *
- * @example rankHighlights(existing, incoming)
- */
 export function rankHighlights(existing: HighlightRun[], incoming: HighlightRun): HighlightRun[] {
   const next = existing.filter((run) => run.match_id !== incoming.match_id);
   next.push(incoming);
@@ -73,11 +58,6 @@ export function rankHighlights(existing: HighlightRun[], incoming: HighlightRun)
   return next.slice(0, HIGHLIGHT_MAX_PER_WINDOW);
 }
 
-/**
- * Public reel: previous ISO week only, top K, no current-window poses.
- *
- * @example publicHighlightFeed(all, new Date("2026-09-10T12:00:00.000Z"))
- */
 export function publicHighlightFeed(runs: HighlightRun[], at: Date = new Date()): HighlightFeed {
   const window = previousEvalWindowId(at);
   const ranked = runs
@@ -88,22 +68,12 @@ export function publicHighlightFeed(runs: HighlightRun[], at: Date = new Date())
   return { window, runs: ranked };
 }
 
-/**
- * Delay between two highlight samples (physics ticks at 60 Hz), clamped for the socket.
- *
- * @example highlightDelayMs(0, 15)
- */
 export function highlightDelayMs(fromTick: number, toTick: number): number {
   const dt = ((toTick - fromTick) / 60) * 1000;
   if (!Number.isFinite(dt) || dt <= 0) return 120;
   return Math.min(280, Math.max(40, dt));
 }
 
-/**
- * Replay sample → spectator wire frame (retired window only).
- *
- * @example highlightSampleToFrame(run, run.samples[0])
- */
 export function highlightSampleToFrame(run: HighlightRun, sample: ReplaySample): SpectateFrameMessage {
   return {
     type: "spectate_frame",
@@ -126,11 +96,7 @@ export function highlightSampleToFrame(run: HighlightRun, sample: ReplaySample):
   };
 }
 
-/**
- * End-of-run HUD for a highlight. elo_delta stays 0 — board writes still go through ingest.
- *
- * @example highlightResultMessage(run)
- */
+/** elo_delta stays 0 — board writes still go through ingest. */
 export function highlightResultMessage(run: HighlightRun): SpectateResultMessage {
   return {
     type: "spectate_result",
@@ -192,11 +158,7 @@ function asSample(value: unknown): ReplaySample | null {
   };
 }
 
-/**
- * Parse a harness POST body. Current-window runs may be stored; GET still filters them out.
- *
- * @example parseHighlightRun(body)
- */
+/** Parse a harness POST body. Current-window runs may be stored; GET still filters them out. */
 export function parseHighlightRun(body: unknown): HighlightRun | null {
   const row = asRecord(body);
   if (!row) return null;

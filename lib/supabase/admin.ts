@@ -7,8 +7,6 @@ import { hasServiceRole, supabaseServiceRoleKey, supabaseUrl } from "@/lib/supab
  *
  * Assumption: Node < 22 has no native WebSocket; supabase-js realtime needs `ws` as transport
  * (harness Docker is Node 20). Browser / Edge never import this module.
- *
- * @example const admin = createAdminSupabase()
  */
 export function createAdminSupabase() {
   if (!hasServiceRole()) {

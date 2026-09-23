@@ -11,8 +11,6 @@ interface LandingTrustProps {
 
 /**
  * Honest launch strip. Counts come from the public board, not marketing copy.
- *
- * @example <LandingTrust agentCount={1} />
  */
 export function LandingTrust({ agentCount }: LandingTrustProps) {
   const { m } = useI18n();

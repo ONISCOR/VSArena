@@ -5,8 +5,6 @@ import { resolve } from "node:path";
 
 /**
  * Copy missing keys from `.env.local` into `process.env`.
- *
- * @example loadLocalEnv()
  */
 export function loadLocalEnv(cwd = process.cwd()): void {
   const file = resolve(cwd, ".env.local");

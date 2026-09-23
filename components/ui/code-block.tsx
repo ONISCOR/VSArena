@@ -11,8 +11,6 @@ interface CodeBlockProps {
 
 /**
  * Copyable snippet for docs and submit.
- *
- * @example <CodeBlock label="python" code="from vsarena import Agent" />
  */
 export function CodeBlock({ code, label = "code", wrap = false }: CodeBlockProps) {
   const { m } = useI18n();

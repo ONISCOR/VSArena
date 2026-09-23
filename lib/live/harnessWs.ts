@@ -4,8 +4,6 @@ const DEFAULT_HARNESS_WS = "wss://vsarena-harness.onrender.com";
 
 /**
  * Base WebSocket origin for the official harness (no path).
- *
- * @example harnessWsBase() // "wss://vsarena-harness.onrender.com"
  */
 export function harnessWsBase(): string {
   const fromEnv = (process.env.NEXT_PUBLIC_HARNESS_WS_URL ?? "").trim().replace(/\/$/, "");
@@ -14,8 +12,6 @@ export function harnessWsBase(): string {
 
 /**
  * Read-only spectator socket.
- *
- * @example harnessSpectateUrl() // "wss://…/spectate"
  */
 export function harnessSpectateUrl(): string {
   return `${harnessWsBase()}/spectate`;
@@ -23,8 +19,6 @@ export function harnessSpectateUrl(): string {
 
 /**
  * HTTP health on the same host (wss → https, ws → http).
- *
- * @example harnessHealthUrl()
  */
 export function harnessHealthUrl(): string {
   const base = harnessWsBase();

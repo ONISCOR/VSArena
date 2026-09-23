@@ -2,25 +2,89 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #07080b;
-  --foreground: #f4f6f8;
-  --arena-bg: #07080b;
-  --arena-fg: #f4f6f8;
-  --arena-cyan: #00aeef;
-  --arena-orange: #f7941e;
-  --arena-muted: #8b949e;
+:root,
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --site-sidebar: 16.25rem;
+  --bg: #050607;
+  --bg-2: #0a0c0f;
+  --panel: rgba(16, 18, 22, 0.72);
+  --ink: #f4f0e6;
+  --on-ink: #111111;
+  --mute: #8d8880;
+  --faint: #5a564f;
+  --line: rgba(244, 240, 230, 0.09);
+  --cyan: #3ee0ea;
+  --amber: #ff7a3c;
+  --magenta: #ef2d86;
+  --chrome: rgba(5, 6, 7, 0.88);
+  --lift: rgba(255, 255, 255, 0.04);
+  --lift-2: rgba(255, 255, 255, 0.07);
+  --panel-inset: rgba(0, 0, 0, 0.4);
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --arena-bg: var(--bg);
+  --arena-fg: var(--ink);
+  --arena-cyan: #3ee0ea;
+  --arena-orange: #ff7a3c;
+  --arena-muted: #8d8880;
+  --danger: #ff5a5a;
+  --danger-text: #ff8a8a;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f4f0e6;
+  --bg-2: #ebe4d6;
+  --panel: rgba(255, 255, 255, 0.78);
+  --ink: #161410;
+  --on-ink: #f4f0e6;
+  --mute: #5c574e;
+  --faint: #8a8478;
+  --line: rgba(22, 20, 16, 0.12);
+  --cyan: #0e8b94;
+  --amber: #c45a1c;
+  --magenta: #c41d6a;
+  --chrome: rgba(255, 251, 244, 0.94);
+  --lift: rgba(22, 20, 16, 0.04);
+  --lift-2: rgba(22, 20, 16, 0.08);
+  --panel-inset: rgba(22, 20, 16, 0.05);
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --arena-bg: var(--bg);
+  --arena-fg: var(--ink);
+  --arena-cyan: #0e8b94;
+  --arena-orange: #c45a1c;
+  --arena-muted: #5c574e;
+  --danger: #c43a3a;
+  --danger-text: #9a2424;
+}
+
+html[data-theme="light"] .studio-glass {
+  background: rgba(255, 251, 244, 0.92);
+  box-shadow:
+    0 10px 36px rgba(22, 20, 16, 0.07),
+    0 0 0 1px rgba(22, 20, 16, 0.06) inset;
+}
+
+html[data-theme="light"] .live-dot {
+  box-shadow: 0 0 8px rgba(14, 139, 148, 0.45);
 }
 
 html,
 body {
   min-height: 100%;
-  color: var(--foreground);
-  background: var(--background);
+  color: var(--ink);
+  background: var(--bg);
 }
 
 body {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  background:
+    radial-gradient(1200px 700px at 80% -10%, rgba(62, 224, 234, 0.07), transparent 55%),
+    radial-gradient(900px 600px at -10% 20%, rgba(239, 45, 134, 0.045), transparent 50%),
+    radial-gradient(800px 500px at 50% 120%, rgba(255, 122, 60, 0.04), transparent 55%),
+    var(--bg);
 }
 
 @layer components {
@@ -102,4 +166,187 @@ body {
     transform: none;
     transition: none;
   }
+}
+
+.site-rail {
+  background:
+    radial-gradient(ellipse 90% 40% at 0% 0%, rgba(62, 224, 234, 0.1), transparent 58%),
+    radial-gradient(ellipse 70% 28% at 100% 100%, rgba(239, 45, 134, 0.06), transparent 60%),
+    var(--chrome);
+}
+
+.site-rail-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.site-rail-item {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 0.7rem;
+  border-radius: 0.95rem;
+  padding: 0.48rem 0.55rem;
+  color: var(--mute);
+  transition:
+    background 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.site-rail-item:hover {
+  background: var(--lift);
+  color: var(--ink);
+  transform: translateX(2px);
+}
+
+.site-rail-item.is-on {
+  background: var(--lift-2);
+  color: var(--ink);
+}
+
+.site-rail-item.is-on::before {
+  content: "";
+  position: absolute;
+  left: 0.3rem;
+  top: 0.85rem;
+  bottom: 0.85rem;
+  width: 1.5px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--cyan) 55%, transparent);
+}
+
+.site-rail-item.is-soon {
+  color: var(--faint);
+}
+
+.site-rail-ico {
+  display: inline-flex;
+  height: 2rem;
+  width: 2rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.7rem;
+  background: var(--lift);
+  color: inherit;
+}
+
+.site-rail-soon {
+  margin-left: auto;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--amber) 35%, var(--line));
+  padding: 0.15rem 0.42rem;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+
+.site-shell {
+  padding-top: 4.5rem;
+  transition: padding-left 300ms ease-out;
+}
+
+@media (min-width: 1024px) {
+  .site-shell {
+    padding-top: 0;
+    padding-left: var(--site-sidebar);
+  }
+  html[data-nav="closed"] .site-shell {
+    padding-left: 0;
+  }
+}
+
+.display {
+  font-family: ui-serif, Georgia, "Iowan Old Style", Palatino, serif;
+  font-weight: 400;
+  letter-spacing: -0.032em;
+  line-height: 0.96;
+}
+
+.mono {
+  font-family: var(--font-mono), ui-monospace, monospace;
+}
+
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan);
+  animation: pulse-dot 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.panel {
+  background: linear-gradient(180deg, var(--lift-2), var(--lift));
+  border: 1px solid var(--line);
+  box-shadow: 0 0 0 1px var(--panel-inset) inset;
+}
+
+.kicker::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  border-radius: 999px;
+  padding: 0.72rem 1.15rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.btn-ghost {
+  border: 1px solid var(--line);
+  background: var(--lift);
+  color: var(--ink);
 }

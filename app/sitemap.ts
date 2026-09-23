@@ -3,7 +3,13 @@ import { siteUrl } from "@/lib/site";
 
 const PATHS = [
   "/",
+  "/playground",
+  "/studio",
   "/simulation",
+  "/team",
+  "/jobs",
+  "/sdk",
+  "/protocol",
   "/arena",
   "/leaderboard",
   "/docs",
@@ -13,12 +19,11 @@ const PATHS = [
   "/events",
   "/terms",
   "/privacy",
+  "/cookies",
 ] as const;
 
 /**
  * Static public URLs for crawlers. Agent detail pages stay off the map until they have traffic.
- *
- * @example GET /sitemap.xml
  */
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = siteUrl();

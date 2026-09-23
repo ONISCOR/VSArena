@@ -17,8 +17,6 @@ import type { JointState, Vec3 } from "./types";
 /**
  * Geometric IK for the 5-DOF yaw + 2-link + wrist chain.
  * Aims the mid-finger TCP (L_WRIST + GRASP_DEPTH past the wrist joint).
- *
- * @example inverseKinematics([0.3, 0.8, 0.1])
  */
 export function inverseKinematics(target: Vec3, gripper = 0): JointState {
   const minY = isOverTable(target[0], target[2]) ? TABLE_TOP_Y + CUBE_HALF + 0.008 : CUBE_HALF + 0.008;

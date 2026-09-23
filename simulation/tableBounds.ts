@@ -6,8 +6,6 @@ export const TABLE_CLEARANCE = 0.008;
 
 /**
  * True when (x, z) is above the table top (including a small rim margin).
- *
- * @example isOverTable(0, 0) // true
  */
 export function isOverTable(x: number, z: number): boolean {
   return Math.abs(x) <= TABLE_HALF_EXTENTS.x + 0.02 && Math.abs(z) <= TABLE_HALF_EXTENTS.z + 0.02;
@@ -15,8 +13,6 @@ export function isOverTable(x: number, z: number): boolean {
 
 /**
  * Lowest allowed Y for a point (table top or floor top).
- *
- * @example surfaceY(0, 0) // TABLE_TOP_Y
  */
 export function surfaceY(x: number, z: number): number {
   return isOverTable(x, z) ? TABLE_TOP_Y : FLOOR_HALF_EXTENTS.y;
@@ -24,8 +20,6 @@ export function surfaceY(x: number, z: number): number {
 
 /**
  * Lowest allowed Y for a block center so the cube sits on the surface.
- *
- * @example minBlockCenterY(0, 0)
  */
 export function minBlockCenterY(x: number, z: number): number {
   return surfaceY(x, z) + CUBE_HALF;
@@ -37,8 +31,6 @@ function pointClears(position: Vec3, extra: number): boolean {
 
 /**
  * False if TCP, palm, jaws, wrist, or forearm would clip through the table/floor.
- *
- * @example armClearsTable(forwardKinematics(joints))
  */
 export function armClearsTable(arm: ArmSnapshot): boolean {
   return (

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isSpectatePath, shouldBroadcastSpectate, snapshotToSpectateFrame } from "@/lib/harness/spectate";
+import {
+  isSpectatePath,
+  shouldBroadcastSpectate,
+  spectateKindForArm,
+  snapshotToSpectateFrame,
+} from "@/lib/harness/spectate";
 import type { SimulationSnapshot } from "@/simulation/types";
 
 function emptySnap(tick: number): SimulationSnapshot {
@@ -64,6 +69,11 @@ describe("spectate", () => {
     expect(shouldBroadcastSpectate("control", "held_out")).toBe(true);
     expect(shouldBroadcastSpectate("scored", "public")).toBe(true);
     expect(shouldBroadcastSpectate("scored", "held_out")).toBe(false);
+  });
+
+  it("labels scored public streams distinctly from control", () => {
+    expect(spectateKindForArm("control")).toBe("control");
+    expect(spectateKindForArm("scored")).toBe("scored");
   });
 
   it("orders blocks cyan → orange → magenta", () => {

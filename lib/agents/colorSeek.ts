@@ -64,8 +64,6 @@ function tcpWorld(state: StateMessage): [number, number, number] {
 
 /**
  * Stack slot for this cube (yellow pad + layer). Task geometry, not cube GPS.
- *
- * @example slotPose("orange")
  */
 function slotPose(hue: Hue): [number, number, number] {
   return [STACK_ORIGIN[0], stackSlotY(ORDER.indexOf(hue)), STACK_ORIGIN[2]];
@@ -77,8 +75,6 @@ function xyOnPad(tcp: [number, number, number], tol = PLACE_XY): boolean {
 
 /**
  * Scripted VLA-track policy: chase color blobs to pick, then carry to STACK_ORIGIN.
- *
- * @example const agent = new ColorSeek(); agent.act(vlaState)
  */
 export class ColorSeek implements Agent {
   private phase: Phase = "hover";

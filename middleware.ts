@@ -4,8 +4,6 @@ import { isSupabaseConfigured, supabaseAnonKey, supabaseUrl } from "@/lib/supaba
 
 /**
  * Refresh the Supabase Auth cookie on every document request.
- *
- * @example export { middleware, config } from this file via root middleware.ts
  */
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });

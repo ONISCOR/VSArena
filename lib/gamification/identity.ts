@@ -15,8 +15,6 @@ export const TAGLINE_MAX = 80;
 
 /**
  * Accent token from a stored string. Unknown values fall back to cyan.
- *
- * @example parseAccent("orange")
  */
 export function parseAccent(value: unknown): AgentAccent {
   return AGENT_ACCENTS.includes(value as AgentAccent) ? (value as AgentAccent) : "cyan";
@@ -24,8 +22,6 @@ export function parseAccent(value: unknown): AgentAccent {
 
 /**
  * Avatar token from a stored string. Unknown values fall back to cobot.
- *
- * @example parseAvatar("eye")
  */
 export function parseAvatar(value: unknown): AgentAvatar {
   return AGENT_AVATARS.includes(value as AgentAvatar) ? (value as AgentAvatar) : "cobot";
@@ -33,8 +29,6 @@ export function parseAvatar(value: unknown): AgentAvatar {
 
 /**
  * Clamp a public tagline. Empty becomes null.
- *
- * @example parseTagline("  stack or bust  ")
  */
 export function parseTagline(value: unknown): string | null {
   if (typeof value !== "string") return null;

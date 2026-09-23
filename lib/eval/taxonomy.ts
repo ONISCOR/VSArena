@@ -13,7 +13,12 @@ export const FAILURE_CODES = [
   "protocol.invalid_task",
   "protocol.invalid_action",
   "protocol.schema_violation",
+  "protocol.agent_unregistered",
+  "protocol.agent_forbidden",
+  "protocol.rate_limited",
+  "protocol.state_mode_not_scored",
   "harness.busy",
+  "harness.queued",
   "harness.misconfigured",
   "harness.disconnect",
 ] as const;
@@ -36,8 +41,6 @@ export interface EvalCounters {
 
 /**
  * Domain from a dotted code.
- *
- * @example failureDomain("policy.timeout") // "policy"
  */
 export function failureDomain(code: FailureCode): FailureDomain {
   return code.split(".")[0] as FailureDomain;
@@ -45,8 +48,6 @@ export function failureDomain(code: FailureCode): FailureDomain {
 
 /**
  * Wire error payload (agent socket). Always includes `code`.
- *
- * @example harnessError("harness.busy", "one match at a time")
  */
 export function harnessError(
   code: FailureCode,
@@ -64,8 +65,6 @@ export function harnessError(
 
 /**
  * End-of-match failure from scores + timeout budget.
- *
- * @example matchFailure({ completion: 1, timeouts: 0, maxConsecutive: 0, disconnected: false })
  */
 export function matchFailure(input: {
   completion: number;
@@ -127,14 +126,19 @@ export function timeoutStrikeBudget(mode: "vla" | "state"): number {
 export const INVALID_ACTION_BUDGET = 5;
 
 /**
- * Leaderboard status. Horizon-end incomplete stays `completed` so ELO uses
- * task_completion_score (same as pre-0.5). Aborts are `failed`.
+ * Leaderboard status. Horizon incomplete stays `completed` for telemetry, but
+ * ELO uses a binary stack outcome (see eloOutcome). Aborts are `failed`.
  */
 export function officialMatchStatus(code: FailureCode): "completed" | "failed" {
   return code === "policy.task_complete" || code === "policy.task_incomplete" ? "completed" : "failed";
 }
 
-/** Disconnect / misconfig / busy never write the public board. */
+/** Disconnect / misconfig / busy / protocol aborts never write the public board. */
 export function shouldIngestOfficialResult(failure: FailureRecord): boolean {
-  return failure.domain !== "harness";
+  return failure.domain === "policy";
+}
+
+/** Public ELO is VLA-only. State-track matches may run for debug but must not ingest. */
+export function shouldIngestObservationMode(mode: "vla" | "state"): boolean {
+  return mode === "vla";
 }

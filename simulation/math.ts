@@ -29,8 +29,6 @@ export function quatIdentity(): Quat {
 
 /**
  * Axis-angle to xyzw quaternion. Axis must be unit length.
- *
- * @example quatFromAxisAngle(0, 1, 0, Math.PI / 2)
  */
 export function quatFromAxisAngle(ax: number, ay: number, az: number, angle: number): Quat {
   const half = angle * 0.5;
@@ -55,8 +53,6 @@ export function quatConjugate(q: Quat): Quat {
 
 /**
  * Rotate a vector by a quaternion.
- *
- * @example quatRotateVec(quatFromAxisAngle(0, 1, 0, Math.PI), [1, 0, 0])
  */
 export function quatRotateVec(q: Quat, v: Vec3): Vec3 {
   const [qx, qy, qz, qw] = q;

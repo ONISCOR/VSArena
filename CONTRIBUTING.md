@@ -12,7 +12,9 @@ By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 | **Bug / docs** | Open an issue with the templates under `.github/ISSUE_TEMPLATE/`. |
 | **Code** | Small PRs. Conventional commits. Tests green. |
 
-Out of MVP scope (flag as `post-mvp` / v1.1): new task physics, server-authoritative anti-cheat, Colosseum visual, payments.
+Out of MVP scope (flag as `post-mvp` / later): new task physics, Arena 1v1, Colosseum visual, payments / Pro APIs.
+
+Never commit secrets, private held-out JSON, Ed25519 private keys, business plans, or outreach kits.
 
 ## Dev setup
 

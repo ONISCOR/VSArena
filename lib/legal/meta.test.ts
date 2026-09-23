@@ -15,4 +15,16 @@ describe("fillLegal", () => {
     expect(text).toContain("https://github.com/ONISCOR/VSArena");
     expect(text).toContain("ONISCOR");
   });
+
+  it("interpolates update dates", () => {
+    const text = fillLegal("{updatedIt} / {updatedEn}", {
+      controller: "Ada",
+      email: "ada@example.com",
+      github: "https://github.com/ONISCOR/VSArena",
+      org: "ONISCOR",
+      updatedIt: "14 settembre 2026",
+      updatedEn: "14 September 2026",
+    });
+    expect(text).toBe("14 settembre 2026 / 14 September 2026");
+  });
 });

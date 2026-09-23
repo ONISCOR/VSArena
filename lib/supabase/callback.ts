@@ -6,8 +6,6 @@ import { ensureProfile } from "@/lib/supabase/profile";
 /**
  * Exchange the OAuth `code` for a session and send the user home.
  * Used by `/auth/callback` and `/auth/v1/callback` (GitHub sometimes hits the latter on localhost).
- *
- * @example GET /auth/callback?code=...
  */
 export async function handleAuthCallback(request: Request): Promise<NextResponse> {
   const url = new URL(request.url);

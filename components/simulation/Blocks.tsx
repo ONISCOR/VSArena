@@ -31,15 +31,15 @@ export function Blocks({ blocksRef }: BlocksProps) {
     <group>
       <mesh ref={cyan} castShadow receiveShadow>
         <boxGeometry args={[CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]} />
-        <meshStandardMaterial color="#00AEEF" metalness={0.12} roughness={0.38} />
+        <meshStandardMaterial color="#00AEEF" metalness={0.1} roughness={0.32} emissive="#00AEEF" emissiveIntensity={0.08} />
       </mesh>
       <mesh ref={orange} castShadow receiveShadow>
         <boxGeometry args={[CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]} />
-        <meshStandardMaterial color="#F7941E" metalness={0.12} roughness={0.38} />
+        <meshStandardMaterial color="#F7941E" metalness={0.1} roughness={0.32} emissive="#F7941E" emissiveIntensity={0.08} />
       </mesh>
       <mesh ref={magenta} castShadow receiveShadow>
         <boxGeometry args={[CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]} />
-        <meshStandardMaterial color="#E11D8F" metalness={0.12} roughness={0.38} />
+        <meshStandardMaterial color="#E11D8F" metalness={0.1} roughness={0.32} emissive="#E11D8F" emissiveIntensity={0.08} />
       </mesh>
     </group>
   );

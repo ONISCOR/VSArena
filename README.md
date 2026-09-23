@@ -1,139 +1,168 @@
-<div align="center">
 
-<img src="public/brand/vs-arena-mark.png" alt="VSArena" width="220" />
+
+![VSArena](public/brand/vs-arena-icon.png)
 
 # VSArena
 
-**The open browser arena where embodied agents stack cubes — and get scored in public.**
+**The official open benchmark for embodied (VLA) policies.**
 
-LMArena made chat model quality visible.  
-VSArena does the same for spatial / VLA policies: watch the physics, run a policy, read the board.
+Server-authoritative stacking evaluation · signed results · public ELO the client cannot write.
 
-**[Live demo →](https://vsarena.vercel.app/simulation)** · [Leaderboard](https://vsarena.vercel.app/leaderboard) · [Studio](#-open-studio) · [Submit an agent](#-submit-an-agent-10-min) · [Protocol](docs/harness.md) · [Eval integrity](docs/eval-integrity.md) · [SDK](docs/sdk.md) · [Systems paper](https://huggingface.co/spaces/AranKair/vsarena-paper)
+[Site](https://vsarena.vercel.app) ·
+[Leaderboard](https://vsarena.vercel.app/leaderboard) ·
+[Work cell](https://vsarena.vercel.app/simulation) ·
+[Protocol](docs/harness.md) ·
+[Eval integrity](docs/eval-integrity.md) ·
+[SDK](docs/sdk.md) ·
 
-<br/>
+![Product](https://img.shields.io/badge/product-1.0.0-00AEEF?style=flat-square)
+![Task](https://img.shields.io/badge/task-block__stacking.v1-F7941E?style=flat-square)
+![Physics](https://img.shields.io/badge/Rapier-0.20.0%20·%2060%20Hz-00AEEF?style=flat-square)
+![License](https://img.shields.io/badge/License-MIT-111111?style=flat-square)
+![CI](https://img.shields.io/github/actions/workflow/status/ONISCOR/VSArena/ci.yml?branch=main&style=flat-square&label=CI)
+![Live](https://img.shields.io/badge/live-vsarena.vercel.app-00AEEF?style=flat-square)
+![Lab](https://img.shields.io/badge/Lab-ONISCOR-E11D8F?style=flat-square)
+
+
+
+---
+
+
+
+## What it is
+
+VSArena is a **public evaluation product** for spatial / VLA policies: one stacking task, one wire protocol, one leaderboard that only the official harness may update.
 
 ```text
-  ┌─────────────┐     state (RGB + instruction)     ┌──────────────┐
-  │  Your agent │ ◄──────────────────────────────── │   Harness    │
-  │  (Python)   │ ────────────────────────────────► │  Rapier 60Hz │
-  └─────────────┘           action (joints)         └──────┬───────┘
-                                                           │
-                                                           ▼
-                                                    Public ELO board
-                                                 (browser cannot write)
+  Policy (Python SDK)  ──state: RGB 128×128 + instruction──►  Harness (Rapier 60 Hz)
+                       ◄──action: joints / ee_delta──────────
+                                                              │
+                         SHA-256 digest + Ed25519 DSSE        ▼
+                                                    Official ingest → public ELO
+                                                    (browser / Studio cannot write)
 ```
 
-[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)](https://nextjs.org/)
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](sdk/python)
-[![Rapier](https://img.shields.io/badge/Physics-Rapier%20WASM-00AEEF?style=flat-square)](https://rapier.rs/)
-[![License](https://img.shields.io/badge/License-MIT-F7941E?style=flat-square)](LICENSE)
-[![CI](https://img.shields.io/github/actions/workflow/status/ONISCOR/VSArena/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/ONISCOR/VSArena/actions)
-[![Live](https://img.shields.io/badge/Live-vsarena.vercel.app-00AEEF?style=flat-square)](https://vsarena.vercel.app)
-[![Lab](https://img.shields.io/badge/Lab-ONISCOR-E11D8F?style=flat-square)](https://github.com/ONISCOR)
 
-</div>
+| Contract           | Value                                                            |
+| ------------------ | ---------------------------------------------------------------- |
+| Product            | `1.0.0`                                                          |
+| Task               | `block_stacking.v1`                                              |
+| Observation schema | `obs.v1` — RGB + language, **no cube poses** on the public track |
+| Action schema      | `action.v1` — validated before physics                           |
+| Physics            | Rapier `0.20.0` · 60 Hz                                          |
+| Replay             | `vsarena-replay-v1` (sparse privileged poses, not RGB)           |
+| Public ELO track   | **VLA only** · binary outcome (full tower = 1, else 0)           |
 
----
 
-## Why this exists
-
-Robot policies are still scored in private sims and PDF tables. You cannot open a URL, watch a failure, and compare ELO.
-
-**VSArena is one stacking task on purpose.** Three cubes. One pad. Cyan → orange → magenta. If people will not run *this*, they will not run a bigger suite.
-
-| | Studio v0.6.0 (now) | Arena (coming) |
-| --- | --- | --- |
-| Agents | One policy | Two policies, same task |
-| Physics | Rapier in Chrome · 60 Hz | Same world |
-| Score | Spatial + completion · harness ELO | Live head-to-head |
+Studio (`/simulation`) is a **public work cell** for teleop, demos, and debug. It does **not** write public ELO. Official scores come from the hosted harness.
 
 ---
 
-## What you get
 
-- **Studio** — 4-DOF arm, table, pad, keyboard teleop, Baseline-IK + ColorSeek demos
-- **VLA track** — 128×128 RGB + language instruction · **no cube GPS** to the policy
-- **State track** — privileged poses for debug / Baseline-IK (not the public leaderboard path)
-- **Harness** — WebSocket `state → action → result` · ingest writes ELO · browser cannot
-- **Eval integrity** — weekly sampler seed, delayed live of last week's best runs, SHA-256 digest + Ed25519 DSSE receipt, benign control arm, failure taxonomy, Rapier/git provenance, held-out layouts, sparse replay ([docs/eval-integrity.md](docs/eval-integrity.md))
-- **Python SDK** — `pip install -e sdk/python` · dry-run offline · live against the harness
-- **Demo recorder** — same VLA observation stream as the harness (`vsarena-demo-v1`)
 
-### Honest limits (MVP)
+## Why reliability is the product
 
-Not Isaac Sim. Not a paper suite. Not 1v1 yet. ColorSeek is a color-blob script, not a neural VLA. Public ELO only from harness ingest — Studio demos do not count.
+Private sims and PDF tables are hard to audit. VSArena publishes the judge path: shared weekly seed, control arm, signed manifest, VLA-only ingest, and a board the browser cannot touch.
+
+### Eval integrity (shipped)
+
+
+| Guarantee                               | Implementation                                                                                                                                                                                                            |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Provenance on every official result** | `product 1.0.0`, Rapier `0.20.0`, 60 Hz, git SHA, Node, mode, latency budget, policy Hz, `sampler_seed`, scene id / seed / hash / arm — also on harness `GET /health`                                                     |
+| **Pinned sampler seed**                 | `hash("eval:" + ISO-week)` — **same seed for every agent that week**, not derived from the agent name                                                                                                                     |
+| **Benign control arm**                  | Production: public-canonical episode (no held-out, no jitter) **before** the scored episode, same policy / socket; row reports control vs scored fail rates                                                               |
+| **Signed run manifest**                 | SHA-256 digest of the canonical manifest (ingest rejects mismatch) + **Ed25519 over DSSE PAE**; verify with published key `GET /api/eval/keys` (and harness `/health`). Ingest secret = channel auth, **not** the receipt |
+| **Agent ownership**                     | Official `hello.agent` must exist on `/account` and match the profile behind `api_key`; Postgres rejects stranger names                                                                                                   |
+| **VLA-only public ELO**                 | `mode=state` may run for debug; harness skips ingest; `/api/matches` rejects non-VLA provenance                                                                                                                           |
+| **Binary ELO**                          | Full stack on the pad only; partial towers do not move rating                                                                                                                                                             |
+| **Held-out scored set (prod)**          | Production defaults to `held_out` and requires `VSARENA_HELD_OUT_JSON` (or explicit staging allow-in-repo flag)                                                                                                           |
+| **Action contract**                     | Invalid actions (`NaN`, unknown joints, oversized `ee_delta`) never touch Rapier; budget → `protocol.invalid_action` (no ELO)                                                                                             |
+| **Latency budget**                      | VLA: 2 s / 5 Hz (8 late → `policy.timeout`). State debug: 150 ms / 20 Hz                                                                                                                                                  |
+| **Protocol / disconnect**               | `protocol.`* and mid-match disconnect **do not** ingest ELO — only policy outcomes on completed official runs                                                                                                             |
+| **Failure taxonomy**                    | Dotted codes: `policy.`* / `protocol.*` / `harness.*`                                                                                                                                                                     |
+| **Run inspection**                      | `/runs/[id]` + `GET /api/matches/[id]` — score, termination, counters, provenance, pose replay                                                                                                                            |
+| **Match queue**                         | Single world; FIFO ≤ 8 with `harness.queued` updates                                                                                                                                                                      |
+
+
+Full matrix and honest limits: **[docs/eval-integrity.md](docs/eval-integrity.md)**.
+
+### What we do **not** claim
+
+- Bit-identical Rapier trajectories across OS/CPU after many steps  
+- That in-repo held-out layouts are secret (they are open; production should use private `VSARENA_HELD_OUT_JSON`)  
+- That ColorSeek / Baseline-IK are neural VLAs, or that Studio demos count toward public ELO  
+- RGB video replay (V1 replay is sparse poses only)
 
 ---
 
-## Open Studio
 
-**Try it in the browser:** [vsarena.vercel.app/simulation](https://vsarena.vercel.app/simulation) — no install. Public ELO still requires harness ingest (see below).
 
-**Run locally:**
+## V1 surface
+
+
+| In V1                                    | Out of V1                |
+| ---------------------------------------- | ------------------------ |
+| Official harness + ingest → public board | Multi-task suite         |
+| Work cell (Rapier) for debug / demos     | Head-to-head 1v1 product |
+| Python SDK dry-run + live                | PyPI package             |
+| Manifest, Ed25519 receipt, sparse replay |                          |
+
+
+---
+
+
+
+## Run the work cell locally
 
 ```bash
 git clone https://github.com/ONISCOR/VSArena.git
 cd VSArena
-cp .env.example .env.local   # fill Supabase + secrets (see below)
+cp .env.example .env.local   # Supabase + secrets
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000/simulation](http://localhost:3000/simulation)
-
-| Key | Action |
-| --- | --- |
-| `Q` / `A` | Base yaw |
-| `W` / `S` | Shoulder pitch |
-| `E` / `D` | Elbow pitch |
-| `R` / `F` | Wrist pitch |
-| `Space` | Gripper |
-| `Esc` | Reset |
-| Drag | Orbit camera |
-
-**Run Baseline-IK** · **Run ColorSeek** · **Record demo** — all in-browser. None of them write public ELO.
+Open [http://localhost:3000/simulation](http://localhost:3000/simulation). Teleop / Baseline-IK / ColorSeek / demo record are local tools — **no public ELO**.
 
 ```bash
 npm test
 npm run harness   # http://127.0.0.1:8787/health · ws://127.0.0.1:8787
 ```
 
-**Public hosted harness:** `wss://vsarena-harness.onrender.com`  
-Health: `https://vsarena-harness.onrender.com/health` → `{ "ok": true, "busy": false }`  
-Watch live (read-only): Studio → Official live ([/simulation?view=live](https://vsarena.vercel.app/simulation?view=live)) · `wss://…/spectate`  
-(Render free tier may cold-start after ~15 min idle; local/Oracle: [deploy/harness/README.md](deploy/harness/README.md).)
+**Official hosted harness:** `wss://vsarena-harness.onrender.com`  
+Health: `https://vsarena-harness.onrender.com/health`  
+Spectator (control arm / weekly highlights): [simulation?view=live](https://vsarena.vercel.app/simulation?view=live) · `wss://…/spectate`  
+Deploy kit: [deploy/harness/README.md](deploy/harness/README.md).
 
-### Env (`.env.local`)
+### Environment
 
-| Variable | Purpose |
-| --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon key (browser) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server only · profiles / ingest |
-| `HARNESS_INGEST_SECRET` | ≥16 chars · header `x-vsarena-ingest` |
-| `VSARENA_APP_URL` | Where the harness POSTs results (e.g. `https://vsarena.vercel.app`) |
-| `VSARENA_HARNESS_URL` | SDK live socket — production: `wss://vsarena-harness.onrender.com` (or `ws://127.0.0.1:8787` local) |
-| `NEXT_PUBLIC_SITE_URL` | Canonical origin (OG, sitemap) — production: `https://vsarena.vercel.app` |
-| `NEXT_PUBLIC_LEGAL_CONTROLLER` | Public name (e.g. `Aran Kair`) |
-| `NEXT_PUBLIC_LEGAL_EMAIL` | Privacy contact |
-| `VSARENA_SCENE_SET` | Harness: `public` or `held_out` (prod defaults `held_out`) |
-| `VSARENA_HELD_OUT_JSON` | Optional private 3-cube JSON on the harness host |
 
-Apply `supabase/schema.sql` once. Enable GitHub OAuth; add redirect URLs:
+| Variable                                      | Purpose                                                    |
+| --------------------------------------------- | ---------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`                    | Supabase URL                                               |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`               | Anon key (browser)                                         |
+| `SUPABASE_SERVICE_ROLE_KEY`                   | Server · profiles / ingest                                 |
+| `HARNESS_INGEST_SECRET`                       | ≥16 chars · header `x-vsarena-ingest` (channel)            |
+| `VSARENA_RESULTS_ED25519_PRIVATE` / `_PUBLIC` | Signs / publishes official receipts                        |
+| `VSARENA_APP_URL`                             | Where the harness POSTs results                            |
+| `VSARENA_HARNESS_URL`                         | SDK live socket (`wss://…` or local `ws://127.0.0.1:8787`) |
+| `NEXT_PUBLIC_SITE_URL`                        | Canonical origin                                           |
+| `VSARENA_SCENE_SET`                           | `public` or `held_out`                                     |
+| `VSARENA_HELD_OUT_JSON`                       | Private three-cube layouts on the harness host             |
 
-- `http://localhost:3000/auth/callback` (local)
-- `https://vsarena.vercel.app/auth/callback` (production)
 
-Set Supabase **Site URL** to `https://vsarena.vercel.app` when deploying to Vercel.
+Apply `supabase/schema.sql`. GitHub OAuth callbacks: `http://localhost:3000/auth/callback`, `https://vsarena.vercel.app/auth/callback`.
 
 ---
 
-## Submit an agent (<10 min)
+
+
+## Submit a policy
 
 ```bash
 pip install -e sdk/python
-python -m vsarena          # HoldPose dry-run sanity check
+python -m vsarena          # dry-run sanity check
 ```
 
 ```python
@@ -141,21 +170,20 @@ from vsarena import Agent, run_match
 
 class MyAgent(Agent):
     def act(self, state: dict) -> dict:
-        # VLA: use state["instruction"] + state["images"]["scene"]
-        # scene.blocks is empty on purpose
+        # VLA: state["instruction"] + state["images"]["scene"]
+        # scene.blocks is empty on the public track by design
         joints = state["scene"]["joint_states"]
         return {"joint_targets": dict(joints), "gripper_state": "open"}
 
 print(run_match(MyAgent(), dry_run=True, mode="vla"))
 ```
 
-**Live** (writes ELO when ingest is configured):
+Live (writes ELO when ingest + signing are configured):
 
 ```bash
 pip install -e "sdk/python[live]"
 export VSARENA_API_KEY=…   # from /account
 export VSARENA_HARNESS_URL=wss://vsarena-harness.onrender.com
-# Or local: npm run harness  (default ws://127.0.0.1:8787)
 ```
 
 ```python
@@ -163,121 +191,94 @@ run_match(
     MyAgent(),
     dry_run=False,
     mode="vla",
-    api_key="…",           # from /account after GitHub login
-    agent_name="MyAgent",  # leaderboard label
+    api_key="…",
+    agent_name="MyAgent",
 )
 ```
 
-Vision baseline (blob chase, not a net):
-
-```python
-from vsarena import ColorSeek, run_match
-print(run_match(ColorSeek(), dry_run=True, mode="vla"))
-```
-
-Full contract: [docs/harness.md](docs/harness.md) · SDK notes: [docs/sdk.md](docs/sdk.md) · Package: [sdk/python](sdk/python)
+Contract: [docs/harness.md](docs/harness.md) · SDK: [docs/sdk.md](docs/sdk.md).
 
 ---
 
-## How scoring works
+
+
+## Scoring
 
 ```mermaid
 flowchart LR
-  A[Policy] -->|action| H[Harness]
-  H -->|state RGB + text| A
+  P[Policy] -->|action| H[Harness]
+  H -->|RGB + instruction| P
   H -->|privileged poses| S[Scoring]
-  S -->|POST ingest| B[Leaderboard]
-  Browser -.->|blocked| B
+  S -->|digest + Ed25519| I[Ingest]
+  I --> B[Public ELO]
+  Client -.->|blocked| B
 ```
 
-- **Spatial accuracy** — distance / orientation to stack slots  
-- **Task completion** — tower on the pad (cyan base → orange → magenta)  
-- **ELO** — vs house 1200 · only via harness + `HARNESS_INGEST_SECRET`
+
+
+- **Spatial accuracy** — distance / orientation to stack slots (telemetry)  
+- **Task completion** — full tower cyan → orange → magenta on the pad  
+- **ELO** — binary vs house 1200 · only via signed harness ingest
 
 ---
 
-## Repo map
+
+
+## Repository layout
 
 ```text
-app/            Next.js App Router (site, Studio, API)
-components/     UI + R3F scene (no physics logic)
-simulation/     Rapier world, FK/IK, grasp, constants
-lib/harness/    Protocol codec + in-browser match loop
-lib/eval/       Provenance, taxonomy, held-out scenes, replay
+app/            Site, work cell, API, run detail
+components/     UI + R3F (no physics authority)
+simulation/     Rapier world, FK/IK, grasp
+lib/harness/    Protocol codec
+lib/eval/       Provenance, taxonomy, scenes, replay, product versions
 lib/scoring/    Pure scoring + ELO
-lib/vision/     128×128 VLA raster + blobs
-lib/agents/     Baseline-IK · ColorSeek
-sdk/python/     pip-installable agent SDK
-server/         Standalone WebSocket harness
-deploy/harness/ Hosted live harness (Render trial · Oracle/Docker)
-docs/           Protocol + SDK
+lib/vision/     128×128 VLA raster
+lib/agents/     Reference policies (Baseline-IK, ColorSeek)
+sdk/python/     Agent SDK
+server/         Official WebSocket harness
+deploy/harness/ Hosting kit
+docs/           Protocol, integrity
 supabase/       Schema + RLS
+public/brand/   Product mark (cube icon)
 ```
-
-**Stack:** Next.js 14 · React Three Fiber · Rapier WASM · Zustand · Tailwind · Supabase · Python 3.11+
 
 ---
 
-## Record imitation data
 
-In Studio → **Record demo** while you teleop (or ColorSeek runs) → **Stop + download**.
-
-Replay:
-
-```bash
-python sdk/python/examples/replay_demo.py vsarena-demo-….json
-```
-
-Format `vsarena-demo-v1`: VLA frames at 5 Hz · joints / `ee_delta` / gripper · **no cube poses**. Not LeRobot parquet yet — convert downstream if you train ACT.
-
----
 
 ## Roadmap
 
-- [x] Studio work-cell + Rapier 60 Hz  
-- [x] VLA observation track + ColorSeek / Baseline-IK  
-- [x] Harness protocol + Python SDK (dry-run + live)  
-- [x] Public leaderboard + seed Baseline-IK  
-- [x] EN / IT UI  
-- [x] Public site on Vercel ([vsarena.vercel.app](https://vsarena.vercel.app))  
-- [x] Hosted harness deploy kit ([deploy/harness](deploy/harness) — Render trial + Oracle Docker)  
-- [x] Eval integrity v0.6.0 ([docs/eval-integrity.md](docs/eval-integrity.md) — weekly sampler seed, delayed live of last week's best runs, control arm, signed manifest, taxonomy, provenance, held-out, replay)  
+- [x] Work cell + Rapier 60 Hz  
+- [x] VLA observation track + reference policies  
+- [x] Harness protocol + Python SDK  
+- [x] Public leaderboard (VLA ingest only)  
+- [x] Eval integrity: weekly seed, control arm, SHA-256 + Ed25519, taxonomy, provenance, replay  
+- [x] Product `1.0.0` / task `block_stacking.v1`  
 - [ ] PyPI `vsarena`  
-- [ ] Arena 1v1  
-- [ ] More tasks (spoilers in Studio: color sort, peg-in-hole, push-to-zone)
+- [ ] Additional tasks under the same protocol  
+- [ ] Hosted capacity / private scene packs  
 
 ---
 
-## Contributing
 
-Short-lived branches. Conventional commits (`feat:`, `fix:`, `perf:`).
+
+## Contributing
 
 ```bash
 npm test
 npx tsc --noEmit
 ```
 
-Full guide: **[CONTRIBUTING.md](CONTRIBUTING.md)**.  
-If you submit an agent, your name lands on the board. That is the contribution that matters most.
+[CONTRIBUTING.md](CONTRIBUTING.md) · [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) · [SECURITY.md](SECURITY.md) · [SUPPORT.md](SUPPORT.md) · [GOVERNANCE.md](GOVERNANCE.md) · [CITATION.cff](CITATION.cff)
 
 ---
 
-## Community standards
 
-| | |
-| --- | --- |
-| [Code of Conduct](CODE_OF_CONDUCT.md) | Contributor Covenant 2.1 |
-| [Contributing](CONTRIBUTING.md) | Setup, PR checklist, scope |
-| [Security](SECURITY.md) | Private vulnerability reports |
-| [Support](SUPPORT.md) | Docs, issues, email |
-| [Governance](GOVERNANCE.md) | Solo maintainer model |
-| [Citation](CITATION.cff) | Cite this software |
-| [License](LICENSE) | MIT |
-
----
 
 ## License
 
-MIT — see [LICENSE](LICENSE). A project of **[ONISCOR](https://github.com/ONISCOR)**, built by **[Aran Kair](https://github.com/arankair)**.
+MIT — [LICENSE](LICENSE). **[ONISCOR](https://github.com/ONISCOR)** · **[Aran Kair](https://github.com/arankair)**.
 
-> One task. One protocol. One board the browser cannot fake.
+> One task. One protocol. One board the client cannot fake.
+

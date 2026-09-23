@@ -1,16 +1,23 @@
-// Assumption: uses existing MVP tables (no slug column). Slugs are derived from agent.name.
+// Postgres match store (MVP agents/matches tables; slugs derived from agent.name).
 
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { armFailed } from "@/lib/eval/control";
 import { verifyStoredReceipt } from "@/lib/eval/receipt";
 import { manifestFromStored, parseTorqueTelemetry } from "@/lib/eval/storedEval";
+import { hydrateReplayArtifact } from "@/lib/eval/replay";
 import { dedupeAgentRows } from "@/lib/matches/dedupe";
 import { agentSlug, type ArenaAgent, type StoredMatch } from "@/lib/matches/memory";
 import { decorateAgents } from "@/lib/gamification/decorate";
 import type { AgentAccent, AgentAvatar } from "@/lib/gamification/identity";
 import { isPublicLeaderboardAgent } from "@/lib/matches/placeholders";
-import { eloDelta } from "@/lib/scoring/elo";
+import { AgentOwnershipError, OfficialIngestError, RateLimitError } from "@/lib/matches/errors";
+import { eloDelta, eloOutcome } from "@/lib/scoring/elo";
 import { ensureProfile } from "@/lib/supabase/profile";
+import {
+  OFFICIAL_MATCHES_PER_AGENT_WINDOW,
+  evalWindowStartUtc,
+} from "@/lib/eval/rateLimit";
+import { evalWindowId } from "@/lib/eval/sampler";
 
 const HOUSE_EMAIL = "house@vsarena.dev";
 const HOUSE_USERNAME = "vsarena-house";
@@ -100,7 +107,23 @@ function storedMatchFromRow(input: {
     failure: telemetry.eval?.failure,
     provenance: telemetry.eval?.provenance,
     control: telemetry.eval?.control ?? undefined,
+    digest: telemetry.eval?.digest,
     signature: signed ? telemetry.eval?.signature : undefined,
+    replay:
+      telemetry.eval?.replay && telemetry.eval.provenance && telemetry.eval.failure
+        ? hydrateReplayArtifact(telemetry.eval.replay, {
+            matchId: input.id,
+            agent: input.agentName,
+            provenance: telemetry.eval.provenance,
+            failure: telemetry.eval.failure,
+            scores: {
+              spatial_accuracy: input.spatial,
+              task_completion_score: input.completion,
+              joint_torque_telemetry: { peak: telemetry.peak, avg: telemetry.avg },
+            },
+            status,
+          })
+        : undefined,
   };
 }
 
@@ -228,10 +251,6 @@ async function houseOwnerId(): Promise<string> {
   if (profileError) throw profileError;
   if (profile?.id) return profile.id as string;
 
-  const { data: anyProfile, error: anyError } = await admin.from("profiles").select("id").limit(1).maybeSingle();
-  if (anyError) throw anyError;
-  if (anyProfile?.id) return anyProfile.id as string;
-
   const created = await admin.auth.admin.createUser({
     email: HOUSE_EMAIL,
     email_confirm: true,
@@ -246,7 +265,7 @@ async function houseOwnerId(): Promise<string> {
       const listed = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
       if (listed.error) throw listed.error;
       const found = listed.data.users.find((user) => user.email === HOUSE_EMAIL);
-      if (!found) throw new Error("house auth user missing");
+      if (!found) throw new Error("house auth user missing — create vsarena-house profile");
       return found.id;
     })());
 
@@ -265,8 +284,6 @@ async function houseOwnerId(): Promise<string> {
 
 /**
  * Upsert house seed agents. Uses ON CONFLICT so concurrent serverless cold starts cannot duplicate rows.
- *
- * @example await ensureHouseAgents()
  */
 export async function ensureHouseAgents(): Promise<void> {
   const admin = createAdminSupabase();
@@ -298,8 +315,6 @@ export async function ensureHouseAgents(): Promise<void> {
 
 /**
  * Ranked public table from Postgres.
- *
- * @example const rows = await listLeaderboardPostgres()
  */
 export async function listLeaderboardPostgres(): Promise<Array<ArenaAgent & { rank: number }>> {
   await ensureHouseAgents();
@@ -316,29 +331,44 @@ export async function getAgentPostgres(slug: string): Promise<ArenaAgent | undef
 }
 
 export async function listMatchesForAgentPostgres(slug: string): Promise<StoredMatch[]> {
-  const admin = createAdminSupabase();
   const rows = await loadAgents();
   const agent = rows.find((row) => agentSlug(row.name) === slug);
   if (!agent) return [];
+  return listMatchesForAgentsPostgres([{ id: agent.id, name: agent.name }]);
+}
+
+/**
+ * Official matches for a set of owned agents. Newest first.
+ */
+export async function listMatchesForAgentsPostgres(
+  agents: Array<{ id: string; name: string }>,
+): Promise<StoredMatch[]> {
+  if (agents.length === 0) return [];
+  const admin = createAdminSupabase();
+  const byId = new Map(agents.map((agent) => [agent.id, agent.name]));
   const { data, error } = await admin
     .from("matches")
-    .select("id, status, spatial_accuracy, task_completion_score, joint_torque_telemetry, elo_delta, created_at, completed_at")
-    .eq("agent_id", agent.id)
+    .select("id, agent_id, status, spatial_accuracy, task_completion_score, joint_torque_telemetry, elo_delta, created_at, completed_at")
+    .in("agent_id", agents.map((agent) => agent.id))
     .order("created_at", { ascending: false })
     .limit(80);
   if (error) throw error;
-  return (data ?? []).map((row) =>
-    storedMatchFromRow({
-      id: String(row.id),
-      agentName: agent.name,
-      status: String(row.status ?? "completed"),
-      spatial: Number(row.spatial_accuracy ?? 0),
-      completion: Number(row.task_completion_score ?? 0),
-      telemetry: row.joint_torque_telemetry,
-      eloDelta: Number(row.elo_delta ?? 0),
-      at: String(row.completed_at ?? row.created_at),
-    }),
-  );
+  return (data ?? []).flatMap((row) => {
+    const agentName = byId.get(String(row.agent_id));
+    if (!agentName) return [];
+    return [
+      storedMatchFromRow({
+        id: String(row.id),
+        agentName,
+        status: String(row.status ?? "completed"),
+        spatial: Number(row.spatial_accuracy ?? 0),
+        completion: Number(row.task_completion_score ?? 0),
+        telemetry: row.joint_torque_telemetry,
+        eloDelta: Number(row.elo_delta ?? 0),
+        at: String(row.completed_at ?? row.created_at),
+      }),
+    ];
+  });
 }
 
 export async function listMatchesPostgres(): Promise<StoredMatch[]> {
@@ -370,42 +400,114 @@ export async function listMatchesPostgres(): Promise<StoredMatch[]> {
 }
 
 /**
+ * Load one official match by UUID.
+ */
+export async function getMatchPostgres(matchId: string): Promise<StoredMatch | undefined> {
+  const admin = createAdminSupabase();
+  const { data, error } = await admin
+    .from("matches")
+    .select("id, agent_id, status, spatial_accuracy, task_completion_score, joint_torque_telemetry, elo_delta, created_at, completed_at")
+    .eq("id", matchId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return undefined;
+  const agents = await loadAgents();
+  const agent = agents.find((row) => row.id === String(data.agent_id));
+  if (!agent) return undefined;
+  return storedMatchFromRow({
+    id: String(data.id),
+    agentName: agent.name,
+    status: String(data.status ?? "completed"),
+    spatial: Number(data.spatial_accuracy ?? 0),
+    completion: Number(data.task_completion_score ?? 0),
+    telemetry: data.joint_torque_telemetry,
+    eloDelta: Number(data.elo_delta ?? 0),
+    at: String(data.completed_at ?? data.created_at),
+  });
+}
+
+/**
  * Persist a result, update ELO, return the stored row. Service-role only.
- *
- * @example await recordMatchPostgres({ agent: "Baseline-IK", ...result })
+ * Requires `owner_id` — agents must be pre-registered and owned by that profile.
  */
 export async function recordMatchPostgres(
-  entry: Omit<StoredMatch, "elo_delta" | "agent_slug" | "stored_at"> & { agent: string },
+  entry: Omit<StoredMatch, "elo_delta" | "agent_slug" | "stored_at"> & {
+    agent: string;
+    owner_id: string;
+  },
 ): Promise<StoredMatch> {
   await ensureHouseAgents();
   const admin = createAdminSupabase();
   const slug = agentSlug(entry.agent);
   const rows = await loadAgents();
-  let row = rows.find((item) => agentSlug(item.name) === slug);
+  const row = rows.find((item) => agentSlug(item.name) === slug);
   if (!row) {
-    const ownerId = await houseOwnerId();
-    const { error: upsertError } = await admin.from("agents").upsert(
-      {
-        owner_id: ownerId,
-        name: entry.agent,
-        elo_rating: 1200,
-      },
-      { onConflict: "name", ignoreDuplicates: true },
-    );
-    if (upsertError) throw upsertError;
-    const reloaded = await loadAgents();
-    row = reloaded.find((item) => agentSlug(item.name) === slug);
-    if (!row) throw new Error("agent upsert failed");
+    throw new AgentOwnershipError(`agent "${entry.agent}" is not registered`);
+  }
+  if (!row.owner_id || row.owner_id !== entry.owner_id) {
+    throw new AgentOwnershipError(`agent "${entry.agent}" is not owned by this profile`);
   }
 
+  const provenance = asEvalProvenance(entry.provenance);
+  if (provenance?.observation_mode && provenance.observation_mode !== "vla") {
+    throw new OfficialIngestError("only the VLA observation track may write public ELO");
+  }
+
+  const window = provenance?.eval_window ?? evalWindowId();
+  await assertUnderWeeklyCap(admin, row.id, window);
+
+  const outcome = eloOutcome(entry.status, entry.scores.task_completion_score);
+  const matchUuid = isMatchUuid(entry.match_id) ? entry.match_id : null;
+
+  const rpc = await admin.rpc("record_official_match", {
+    p_agent_id: row.id,
+    p_owner_id: entry.owner_id,
+    p_match_id: matchUuid,
+    p_status: entry.status,
+    p_spatial: entry.scores.spatial_accuracy,
+    p_completion: entry.scores.task_completion_score,
+    p_outcome: outcome,
+    p_telemetry: entry.scores.joint_torque_telemetry,
+    p_task_type: "block_stacking",
+  });
+
+  if (!rpc.error) {
+    const out = Array.isArray(rpc.data) ? rpc.data[0] : rpc.data;
+    const delta = Number((out as { elo_delta?: number } | null)?.elo_delta ?? 0);
+    const storedAt = String((out as { stored_at?: string } | null)?.stored_at ?? new Date().toISOString());
+    const agentName = String((out as { agent_name?: string } | null)?.agent_name ?? row.name);
+    return {
+      ...entry,
+      elo_delta: delta,
+      agent: agentName,
+      agent_slug: slug,
+      stored_at: storedAt,
+    };
+  }
+
+  if (!isMissingRpc(rpc.error)) {
+    throw rpc.error;
+  }
+
+  // Fallback when supabase/record-match.sql is not applied yet: insert then optimistic ELO.
+  return recordMatchPostgresFallback(entry, row, slug, outcome, matchUuid);
+}
+
+async function recordMatchPostgresFallback(
+  entry: Omit<StoredMatch, "elo_delta" | "agent_slug" | "stored_at"> & {
+    agent: string;
+    owner_id: string;
+  },
+  row: AgentRow,
+  slug: string,
+  outcome: number,
+  matchUuid: string | null,
+): Promise<StoredMatch> {
+  const admin = createAdminSupabase();
   const matchesPlayed = row.matches?.[0]?.count ?? 0;
   const rating = row.elo_rating ?? 1200;
-  const outcome = entry.status === "failed" ? 0 : entry.scores.task_completion_score;
   const delta = eloDelta(rating, outcome, matchesPlayed);
   const now = new Date().toISOString();
-
-  const { error: eloError } = await admin.from("agents").update({ elo_rating: rating + delta }).eq("id", row.id);
-  if (eloError) throw eloError;
 
   const insert: Record<string, unknown> = {
     agent_id: row.id,
@@ -417,12 +519,48 @@ export async function recordMatchPostgres(
     status: entry.status,
     completed_at: now,
   };
-  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(entry.match_id)) {
-    insert.id = entry.match_id;
-  }
+  if (matchUuid) insert.id = matchUuid;
 
+  // Insert first so a failed write never leaves a rating bump without a match row.
   const { error: matchError } = await admin.from("matches").insert(insert);
   if (matchError) throw matchError;
+
+  const { data: updated, error: eloError } = await admin
+    .from("agents")
+    .update({ elo_rating: rating + delta })
+    .eq("id", row.id)
+    .eq("owner_id", entry.owner_id)
+    .eq("elo_rating", rating)
+    .select("id");
+  if (eloError) throw eloError;
+  if (!updated?.length) {
+    // Concurrent rating change — re-read and apply once more (best-effort without RPC).
+    const { data: fresh, error: freshError } = await admin
+      .from("agents")
+      .select("elo_rating")
+      .eq("id", row.id)
+      .eq("owner_id", entry.owner_id)
+      .maybeSingle();
+    if (freshError) throw freshError;
+    const freshRating = Number(fresh?.elo_rating ?? 1200);
+    const retryDelta = eloDelta(freshRating, outcome, matchesPlayed + 1);
+    const { error: retryError } = await admin
+      .from("agents")
+      .update({ elo_rating: freshRating + retryDelta })
+      .eq("id", row.id)
+      .eq("owner_id", entry.owner_id);
+    if (retryError) throw retryError;
+    if (matchUuid) {
+      await admin.from("matches").update({ elo_delta: retryDelta }).eq("id", matchUuid);
+    }
+    return {
+      ...entry,
+      elo_delta: retryDelta,
+      agent: row.name,
+      agent_slug: slug,
+      stored_at: now,
+    };
+  }
 
   return {
     ...entry,
@@ -433,10 +571,54 @@ export async function recordMatchPostgres(
   };
 }
 
+function isMatchUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function asEvalProvenance(
+  value: unknown,
+): { observation_mode?: string; eval_window?: string } | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+  return {
+    observation_mode: typeof row.observation_mode === "string" ? row.observation_mode : undefined,
+    eval_window: typeof row.eval_window === "string" ? row.eval_window : undefined,
+  };
+}
+
+function isMissingRpc(error: { message?: string; code?: string } | null): boolean {
+  const message = (error?.message ?? "").toLowerCase();
+  return (
+    message.includes("record_official_match") ||
+    message.includes("could not find the function") ||
+    message.includes("does not exist") ||
+    error?.code === "42883" ||
+    error?.code === "PGRST202"
+  );
+}
+
+async function assertUnderWeeklyCap(
+  admin: ReturnType<typeof createAdminSupabase>,
+  agentId: string,
+  evalWindow: string,
+): Promise<void> {
+  const start = evalWindowStartUtc(evalWindow);
+  if (!start) return;
+  const { count, error } = await admin
+    .from("matches")
+    .select("id", { count: "exact", head: true })
+    .eq("agent_id", agentId)
+    .gte("created_at", start.toISOString());
+  if (error) throw error;
+  if ((count ?? 0) >= OFFICIAL_MATCHES_PER_AGENT_WINDOW) {
+    throw new RateLimitError(
+      `official match limit reached for this agent this week (${OFFICIAL_MATCHES_PER_AGENT_WINDOW})`,
+    );
+  }
+}
+
 /**
  * Owner cosmetic patch. Returns null if the slug is missing.
- *
- * @example await updateAgentLookPostgres(ownerId, "ada-stack", { accent: "magenta" })
  */
 export async function updateAgentLookPostgres(
   ownerId: string,

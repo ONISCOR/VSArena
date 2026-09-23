@@ -1,48 +1,51 @@
 "use client";
 
 import { useI18n } from "@/components/i18n/LocaleProvider";
-import { PageFrame } from "@/components/layout/PageFrame";
+import { PageHero } from "@/components/site/PageHero";
+import { cookiesDocument } from "@/lib/legal/cookies";
 import { fillLegal, legalVars } from "@/lib/legal/meta";
 import { privacyDocument } from "@/lib/legal/privacy";
 import { termsDocument } from "@/lib/legal/terms";
 import type { LegalBlock, LegalDocument } from "@/lib/legal/types";
 
 interface LegalViewProps {
-  kind: "privacy" | "terms";
+  kind: "privacy" | "terms" | "cookies";
 }
 
 /**
- * Full privacy or terms text in the active language.
- *
- * @example <LegalView kind="privacy" />
+ * Full privacy, terms or cookie text in the active language.
  */
 export function LegalView({ kind }: LegalViewProps) {
   const { locale } = useI18n();
   const vars = legalVars();
-  const doc: LegalDocument = kind === "privacy" ? privacyDocument(locale) : termsDocument(locale);
+  const doc: LegalDocument =
+    kind === "privacy" ? privacyDocument(locale) : kind === "terms" ? termsDocument(locale) : cookiesDocument(locale);
   const fill = (text: string) => fillLegal(text, vars);
 
   return (
-    <PageFrame kicker={doc.kicker} title={doc.title}>
-      <div className="max-w-2xl">
-        <p className="text-sm text-arena-muted">{doc.updatedLine}</p>
-        <div className="mt-6 space-y-4 text-base leading-7 text-arena-muted">
+    <>
+      <PageHero kicker={doc.kicker} title={doc.title} lead={fill(doc.updatedLine)}>
+        <div className="max-w-2xl space-y-4 text-base leading-7 text-[var(--mute)]">
           {doc.intro.map((p) => (
             <p key={p.slice(0, 48)}>{fill(p)}</p>
           ))}
         </div>
-        {doc.sections.map((section) => (
-          <section key={section.title} className="mt-12">
-            <h2 className="text-xl font-semibold tracking-tight text-white">{section.title}</h2>
-            <div className="mt-4 space-y-4 text-base leading-7 text-arena-muted">
-              {section.blocks.map((block, index) => (
-                <LegalBlockView key={`${section.title}-${index}`} block={block} fill={fill} />
-              ))}
-            </div>
-          </section>
-        ))}
+      </PageHero>
+      <div className="mx-auto max-w-[1100px] px-5 pb-28 md:px-8">
+        <div className="max-w-2xl">
+          {doc.sections.map((section) => (
+            <section key={section.title} className="mt-12 first:mt-0">
+              <h2 className="text-xl font-semibold tracking-tight text-[var(--ink)]">{section.title}</h2>
+              <div className="mt-4 space-y-4 text-base leading-7 text-[var(--mute)]">
+                {section.blocks.map((block, index) => (
+                  <LegalBlockView key={`${section.title}-${index}`} block={block} fill={fill} />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
       </div>
-    </PageFrame>
+    </>
   );
 }
 

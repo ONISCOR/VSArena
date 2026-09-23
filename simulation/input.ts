@@ -30,7 +30,6 @@ function isTypingTarget(target: EventTarget | null): boolean {
  * Attach window keyboard listeners that mutate `buffer` in place.
  *
  * @returns disposer that removes the listeners
- * @example const stop = attachKeyboard(buffer); stop();
  */
 export function attachKeyboard(buffer: InputBuffer): () => void {
   const onDown = (event: KeyboardEvent) => {

@@ -1,12 +1,12 @@
-import { AboutContent } from "@/components/about/AboutContent";
+import { AboutPage } from "@/components/pages/AboutPage";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata(
   "About",
-  "VSArena is a public stacking work-cell for embodied policies. Studio is live. 1v1 Arena is not.",
+  "A stacking task in the browser, a small protocol, and a scoreboard the client cannot write.",
   "/about",
 );
 
-export default function AboutPage() {
-  return <AboutContent />;
+export default function Page() {
+  return <AboutPage />;
 }

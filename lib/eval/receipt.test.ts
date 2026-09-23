@@ -79,6 +79,7 @@ function ingestBody(manifest: RunManifest, extra: Record<string, unknown> = {}) 
     match_id: manifest.match_id,
     status: manifest.status,
     agent: manifest.agent,
+    owner_id: "22222222-2222-4222-8222-222222222222",
     scores: manifest.scores,
     sampler_seed: manifest.sampler_seed,
     failure: manifest.failure,
@@ -173,9 +174,17 @@ describe("official ingest gate", () => {
     if (ok.ok) {
       expect(ok.entry.digest).toBe(receipt.digest);
       expect(ok.entry.signature).toBe(receipt.signature);
+      expect(ok.entry.owner_id).toBe("22222222-2222-4222-8222-222222222222");
       expect(ok.entry.scores.joint_torque_telemetry.eval?.alg).toBe(RECEIPT_ALG);
       expect(ok.entry.scores.joint_torque_telemetry.eval?.digest).toBe(receipt.digest);
     }
+
+    expect(
+      parseOfficialIngest(
+        { ...base, digest: receipt.digest, signature: receipt.signature, owner_id: "not-a-uuid" },
+        { publicKey: keys.publicKey },
+      ).ok,
+    ).toBe(false);
 
     expect(
       parseOfficialIngest(

@@ -49,8 +49,6 @@ interface DecorateInput {
 
 /**
  * Attach week volume, stack flag, and harness badges. Rank is applied by the caller.
- *
- * @example decorateAgents(agents, pulses)
  */
 export function decorateAgents(agents: DecorateInput[], pulses: MatchPulse[], now = Date.now()): DecoratedAgent[] {
   const houseElo = agents.find((agent) => agent.slug === HOUSE_SLUG)?.elo ?? 1200;

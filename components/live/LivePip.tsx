@@ -1,32 +1,19 @@
 "use client";
 
-/** Mini official-live preview (PiP). Assumption: click expands to full LiveViewer; one WS at a time. */
+/** Mini official-live preview (PiP). Click expands to full LiveViewer; one WS at a time. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
-import { ContactShadows } from "@react-three/drei";
 import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
-import { ArenaSet } from "@/components/simulation/ArenaSet";
-import { Blocks } from "@/components/simulation/Blocks";
-import { RobotArm } from "@/components/simulation/RobotArm";
-import { Table } from "@/components/simulation/Table";
-import { TargetZone } from "@/components/simulation/TargetZone";
+import { IndustrialHall, IndustrialLook } from "@/components/simulation/set-v2";
+import { SPECTATE_REST, SpectateWorkcell } from "@/components/simulation/SpectateWorkcell";
 import type { SpectateFrameMessage, SpectateMessage } from "@/lib/harness/spectate";
 import { harnessHealthUrl, harnessSpectateUrl } from "@/lib/live/harnessWs";
 import { TABLE_TOP_Y } from "@/simulation/constants";
 import type { BlockState, JointState } from "@/simulation/types";
 import { cn } from "@/lib/utils";
 
-const ZERO_JOINTS: JointState = {
-  baseYaw: 0,
-  shoulderPitch: 0.6,
-  elbowPitch: -1.2,
-  wristPitch: -0.4,
-  gripper: 0,
-};
-
-/** Pull back + look at table center so the square frames the whole work-cell. */
-const CAM: [number, number, number] = [1.9, 1.55, 1.75];
+const CAM: [number, number, number] = [1.55, 1.22, 1.48];
 const CAM_TARGET: [number, number, number] = [0.08, TABLE_TOP_Y + 0.06, 0];
 
 function PipCamera() {
@@ -48,11 +35,9 @@ interface LivePipProps {
 
 /**
  * Bottom-right square preview of the hosted harness spectator.
- *
- * @example <LivePip label="Official live" onExpand={openLive} />
  */
 export function LivePip({ label, onExpand }: LivePipProps) {
-  const jointsRef = useRef<JointState>({ ...ZERO_JOINTS });
+  const jointsRef = useRef<JointState>({ ...SPECTATE_REST });
   const blocksRef = useRef<BlockState[]>([]);
   const [status, setStatus] = useState<PipStatus>("connecting");
   const [agent, setAgent] = useState<string | null>(null);
@@ -136,8 +121,8 @@ export function LivePip({ label, onExpand }: LivePipProps) {
       onClick={onExpand}
       aria-label={`${label} — expand`}
       className={cn(
-        "group pointer-events-auto relative h-[9.5rem] w-[9.5rem] overflow-hidden rounded-xl border text-left shadow-[0_12px_40px_rgba(0,0,0,0.45)] transition",
-        "border-white/15 bg-[#0c0e12] hover:border-emerald-400/40 hover:ring-1 hover:ring-emerald-400/25",
+        "group pointer-events-auto relative h-[8.5rem] w-full overflow-hidden rounded-xl border text-left transition",
+        "border-[var(--line)] bg-[var(--lift)] hover:border-[var(--cyan)]/40",
         live && (reel ? "border-cyan-400/35" : "border-emerald-400/35"),
       )}
     >
@@ -146,29 +131,19 @@ export function LivePip({ label, onExpand }: LivePipProps) {
           className="h-full w-full"
           dpr={[1, 1.25]}
           gl={{ antialias: false, alpha: false, powerPreference: "low-power" }}
-          camera={{ position: CAM, fov: 46, near: 0.1, far: 24 }}
+          camera={{ position: CAM, fov: 38, near: 0.1, far: 16 }}
           onCreated={({ gl, camera }) => {
-            gl.setClearColor("#12151c", 1);
+            gl.setClearColor("#1a1e24", 1);
             gl.toneMapping = ACESFilmicToneMapping;
-            gl.toneMappingExposure = 1.25;
+            gl.toneMappingExposure = 1.18;
             gl.outputColorSpace = SRGBColorSpace;
             camera.lookAt(...CAM_TARGET);
           }}
         >
           <PipCamera />
-          <ambientLight intensity={0.7} />
-          <hemisphereLight args={["#c5d0dc", "#1a1e26", 0.8]} />
-          <spotLight position={[1.6, 2.8, 1.4]} angle={0.7} penumbra={0.5} intensity={3.2} decay={0} color="#fff6ee" />
-          <ArenaSet />
-          <Table />
-          <TargetZone />
-          {ready ? (
-            <>
-              <RobotArm jointsRef={jointsRef} />
-              <Blocks blocksRef={blocksRef} />
-            </>
-          ) : null}
-          <ContactShadows position={[0, 0.002, 0]} opacity={0.28} scale={6} blur={2} far={2} />
+          <IndustrialLook compact />
+          <IndustrialHall compact />
+          <SpectateWorkcell jointsRef={jointsRef} blocksRef={blocksRef} ready={ready} />
         </Canvas>
       </div>
 
@@ -176,7 +151,7 @@ export function LivePip({ label, onExpand }: LivePipProps) {
         <span
           className={cn(
             "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
-            live ? (reel ? "bg-cyan-500/25 text-cyan-100" : "bg-emerald-500/25 text-emerald-200") : "bg-white/10 text-arena-muted",
+            live ? (reel ? "bg-cyan-500/25 text-cyan-100" : "bg-emerald-500/25 text-emerald-200") : "bg-white/10 text-white",
           )}
         >
           <span
@@ -191,7 +166,7 @@ export function LivePip({ label, onExpand }: LivePipProps) {
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent px-2 pb-2 pt-6">
         <p className="text-[11px] font-medium leading-tight text-white">{label}</p>
-        <p className="mt-0.5 truncate text-[10px] text-arena-muted">
+        <p className="mt-0.5 truncate text-[10px] text-white">
           {agent ?? (live ? "Official harness" : "Tap to expand")}
         </p>
       </div>

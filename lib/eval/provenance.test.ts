@@ -29,8 +29,34 @@ describe("eval provenance", () => {
     expect(provenance.git_sha).toBe("abcdef0123456789");
     expect(provenance.observation_mode).toBe("vla");
     expect(provenance.latency_budget_ms).toBe(latencyBudgetMs("vla"));
+    expect(provenance.task_id).toBe("block_stacking");
+    expect(provenance.task_version).toBe("block_stacking.v1");
+    expect(provenance.observation_schema_version).toBe("obs.v1");
+    expect(provenance.action_schema_version).toBe("action.v1");
     expect(gitSha({ VERCEL_GIT_COMMIT_SHA: "deadbeef" })).toBe("deadbeef");
     expect(gitSha({})).toBe("unknown");
+  });
+
+  it("records episode wall-clock duration when start/end are provided", () => {
+    const provenance = buildProvenance({
+      mode: "vla",
+      samplerSeed: 1,
+      startedAtMs: 1_000,
+      endedAtMs: 4_500,
+      scene: {
+        set: "public",
+        id: "public.canonical",
+        seed: 0,
+        hash: "h",
+        private_override: false,
+        arm: "scored",
+      },
+      counters: emptyCounters(),
+      env: {},
+    });
+    expect(provenance.started_at_ms).toBe(1000);
+    expect(provenance.ended_at_ms).toBe(4500);
+    expect(provenance.duration_ms).toBe(3500);
   });
 
   it("keeps the replay format id stable", () => {

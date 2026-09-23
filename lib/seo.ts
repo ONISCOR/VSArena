@@ -3,8 +3,6 @@ import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, siteUrl } from "@/lib/site";
 
 /**
  * Root metadata for the App Router layout.
- *
- * @example export const metadata = rootMetadata()
  */
 export function rootMetadata(): Metadata {
   const url = siteUrl();
@@ -39,8 +37,6 @@ export function rootMetadata(): Metadata {
 
 /**
  * Per-page title, description, and canonical path.
- *
- * @example export const metadata = pageMetadata("Docs", "SDK and protocol.", "/docs")
  */
 export function pageMetadata(title: string, description: string, path: string): Metadata {
   const canonical = path.startsWith("/") ? path : `/${path}`;

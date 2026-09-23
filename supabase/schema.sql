@@ -1,5 +1,6 @@
 -- Assumption: run in Supabase SQL editor. Idempotent. Match inserts use the service role (bypasses RLS).
 -- Auth: enable GitHub provider. Redirect URL: http://localhost:3000/auth/callback (and :3001 if needed).
+-- After this file, also run supabase/record-match.sql (atomic official ingest) and supabase/gamification.sql / highlights.sql as needed.
 
 create table if not exists profiles (
   id uuid references auth.users primary key,

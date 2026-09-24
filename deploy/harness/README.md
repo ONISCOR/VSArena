@@ -1,6 +1,6 @@
 # Hosted VSArena harness
 
-Public live matches: Python SDK → `wss://vsarena-harness.onrender.com` → Rapier → ingest to `https://vsarena.vercel.app`.
+Public live matches: Python SDK → `wss://vsarena-harness.onrender.com` → Rapier → ingest to `https://www.vsarena.app`.
 
 **Trial (recommended first):** [Render free](#render-one-week-trial) — ~10 minutes, no VM.  
 **Later / always-on free:** [Oracle Always Free](#oracle-always-free) — same Docker image.
@@ -26,7 +26,7 @@ In the service → **Environment**, set (paste from your Vercel / Supabase proje
 
 | Key | Source |
 | --- | --- |
-| `VSARENA_APP_URL` | `https://vsarena.vercel.app` (already in blueprint) |
+| `VSARENA_APP_URL` | `https://www.vsarena.app` (already in blueprint) |
 | `HARNESS_INGEST_SECRET` | **Same** ≥16-char value as Vercel Production |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
@@ -42,13 +42,13 @@ Production URL: `https://vsarena-harness.onrender.com` / `wss://vsarena-harness.
 curl -s https://vsarena-harness.onrender.com/health
 # {"ok":true,"busy":false}
 
-export VSARENA_API_KEY=…   # from https://vsarena.vercel.app/account
+export VSARENA_API_KEY=…   # from https://www.vsarena.app/account
 export VSARENA_HARNESS_URL=wss://vsarena-harness.onrender.com
 pip install -e "sdk/python[live]"
 python -c "from vsarena import ColorSeek, run_match; print(run_match(ColorSeek(), dry_run=False, mode='vla', agent_name='ColorSeek'))"
 ```
 
-Check [Leaderboard](https://vsarena.vercel.app/leaderboard).
+Check [Leaderboard](https://www.vsarena.app/leaderboard).
 
 ### 4. After the trial
 
@@ -97,7 +97,7 @@ nano .env   # fill secrets + HARNESS_DOMAIN — never commit .env
 | Variable | Notes |
 | --- | --- |
 | `HARNESS_DOMAIN` | DNS name pointing at this VM (A record) |
-| `VSARENA_APP_URL` | `https://vsarena.vercel.app` |
+| `VSARENA_APP_URL` | `https://www.vsarena.app` |
 | `HARNESS_INGEST_SECRET` | Same ≥16 chars as Vercel |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon key |

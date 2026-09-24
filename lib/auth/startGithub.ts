@@ -4,7 +4,7 @@ import { createBrowserSupabase } from "@/lib/supabase/browser";
 
 /**
  * GitHub OAuth must return to *this* origin. Supabase Site URL is production;
- * if localhost is missing from Redirect URLs, GitHub dumps you on vsarena.vercel.app.
+ * if localhost is missing from Redirect URLs, GitHub dumps you on www.vsarena.app.
  */
 export async function startGithubSignIn(next = "/account"): Promise<void> {
   const dest = next.startsWith("/") && !next.startsWith("//") ? next : "/account";

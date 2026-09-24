@@ -33,7 +33,7 @@ pip install -e "sdk/python[live]"
 python -m vsarena
 ```
 
-Schema once: `supabase/schema.sql`. GitHub OAuth redirect: `http://localhost:3000/auth/callback`.
+Schema once: `supabase/schema.sql`. GitHub OAuth redirects: `http://localhost:3000/auth/callback`, `https://www.vsarena.app/auth/callback`.
 
 ## Before you open a PR
 

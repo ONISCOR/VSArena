@@ -128,7 +128,7 @@ Production WebSocket (Render):
 | Agent (judge) | `wss://vsarena-harness.onrender.com` |
 | Spectator (read-only) | `wss://vsarena-harness.onrender.com/spectate` |
 | Health | `GET https://vsarena-harness.onrender.com/health` → `{ "ok": true, "busy": false, "live": …, "eval": { product, rapier, scene_set, … } }` |
-| Watch in browser | Studio → Official live · [/simulation?view=live](https://vsarena.vercel.app/simulation?view=live) |
+| Watch in browser | Studio → Official live · [/simulation?view=live](https://www.vsarena.app/simulation?view=live) |
 
 Free tier may take 30–60s after idle (~15 min). One match at a time; a second agent gets `harness busy`. Spectators do not block the agent. Self-host / Oracle: [deploy/harness/README.md](../deploy/harness/README.md).
 

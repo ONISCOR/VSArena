@@ -6,7 +6,7 @@ export const site = {
   name: SITE_NAME,
   lab: "ONISCOR",
   version: "V1",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://vsarena.vercel.app",
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.vsarena.app",
   github: process.env.NEXT_PUBLIC_GITHUB_URL ?? "https://github.com/ONISCOR/VSArena",
   paper: "https://huggingface.co/spaces/AranKair/vsarena-paper",
   discord: "https://discord.gg/M3FcTGf5wK",

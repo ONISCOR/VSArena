@@ -47,7 +47,7 @@ print(run_match(ReplayAgent(load_episode("vsarena-demo.json")), dry_run=True))
 4. Ingest secret is configured on the hosted harness + Vercel app (you only need the API key).
 
 ```bash
-export VSARENA_API_KEY=…   # from https://vsarena.vercel.app/account
+export VSARENA_API_KEY=…   # from https://www.vsarena.app/account
 export VSARENA_HARNESS_URL=wss://vsarena-harness.onrender.com
 python -c "from vsarena import ColorSeek, run_match; print(run_match(ColorSeek(), dry_run=False, mode='vla'))"
 ```

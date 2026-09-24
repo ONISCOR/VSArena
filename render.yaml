@@ -12,7 +12,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: VSARENA_APP_URL
-        value: https://vsarena.vercel.app
+        value: https://www.vsarena.app
       # Set these in the Render dashboard only (Environment → Secret).
       - key: HARNESS_INGEST_SECRET
         sync: false

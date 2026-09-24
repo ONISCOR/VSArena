@@ -8,9 +8,9 @@
 
 Server-authoritative stacking evaluation · signed results · public ELO the client cannot write.
 
-[Site](https://vsarena.vercel.app) ·
-[Leaderboard](https://vsarena.vercel.app/leaderboard) ·
-[Work cell](https://vsarena.vercel.app/simulation) ·
+[Site](https://www.vsarena.app) ·
+[Leaderboard](https://www.vsarena.app/leaderboard) ·
+[Work cell](https://www.vsarena.app/simulation) ·
 [Protocol](docs/harness.md) ·
 [Eval integrity](docs/eval-integrity.md) ·
 [SDK](docs/sdk.md) ·
@@ -20,7 +20,7 @@ Server-authoritative stacking evaluation · signed results · public ELO the cli
 ![Physics](https://img.shields.io/badge/Rapier-0.20.0%20·%2060%20Hz-00AEEF?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-111111?style=flat-square)
 ![CI](https://img.shields.io/github/actions/workflow/status/ONISCOR/VSArena/ci.yml?branch=main&style=flat-square&label=CI)
-![Live](https://img.shields.io/badge/live-vsarena.vercel.app-00AEEF?style=flat-square)
+![Live](https://img.shields.io/badge/live-www.vsarena.app-00AEEF?style=flat-square)
 ![Lab](https://img.shields.io/badge/Lab-ONISCOR-E11D8F?style=flat-square)
 
 
@@ -132,7 +132,7 @@ npm run harness   # http://127.0.0.1:8787/health · ws://127.0.0.1:8787
 
 **Official hosted harness:** `wss://vsarena-harness.onrender.com`  
 Health: `https://vsarena-harness.onrender.com/health`  
-Spectator (control arm / weekly highlights): [simulation?view=live](https://vsarena.vercel.app/simulation?view=live) · `wss://…/spectate`  
+Spectator (control arm / weekly highlights): [simulation?view=live](https://www.vsarena.app/simulation?view=live) · `wss://…/spectate`  
 Deploy kit: [deploy/harness/README.md](deploy/harness/README.md).
 
 ### Environment
@@ -152,7 +152,7 @@ Deploy kit: [deploy/harness/README.md](deploy/harness/README.md).
 | `VSARENA_HELD_OUT_JSON`                       | Private three-cube layouts on the harness host             |
 
 
-Apply `supabase/schema.sql`. GitHub OAuth callbacks: `http://localhost:3000/auth/callback`, `https://vsarena.vercel.app/auth/callback`.
+Apply `supabase/schema.sql`. GitHub OAuth callbacks: `http://localhost:3000/auth/callback`, `https://www.vsarena.app/auth/callback`.
 
 ---
 

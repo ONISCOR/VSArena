@@ -13,10 +13,6 @@ VSArena is an open-source MVP published by **[ONISCOR](https://github.com/ONISCO
 
 There is no incorporated company, board, or committee yet. ONISCOR is the independent lab and GitHub organization that hosts this repository. If the project grows, this file will be updated.
 
-## Roadmap authority
-
-MVP scope is defined in `.cursorrules` / README. Features outside that loop (*agent → score → leaderboard*) are deferred unless they unblock launch.
-
 ## Becoming a maintainer
 
 There is no formal path yet. Sustained high-quality PRs and issue triage may lead to collaborator access. Ask via email or issue if you want to help regularly.
